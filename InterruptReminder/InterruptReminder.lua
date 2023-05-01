@@ -24,11 +24,7 @@ function FindInterruptSpell(spells)
                 local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
                 if HasAction(slot) then
                     local actionType, id, _, actionName = GetActionInfo(slot)
-                    if actionType == "macro" then
-                        actionName, _, id = GetMacroSpell(id)
-                    elseif actionType == "item" then
-                        actionName = GetItemInfo(id)
-                    elseif actionType == "spell" then
+                    if actionType == "spell" then
                         actionName = GetSpellInfo(id)
                     end
                     if actionName and string.match(string.lower(actionName), string.lower(spell)) then
@@ -48,7 +44,7 @@ list that class' interrupting spells, and find their location in the action bars
 function f:PLAYER_ENTERING_WORLD()
     local playerClass = UnitClass("player")
     local switch = {
-        ["Death Knight"] = {"Mind Freeze", "Asphyxiate", "Strangulate"},
+        ["Death Knight"] = {"Mind Freeze", "Asphyxiate", "Strangulate", "Death Grip"},
         ["Demon Hunter"] = {"Disrupt"},
         ["Druid"] = {"Skull Bash", "Solar Beam"},
         ["Evoker"] = {"Quell"},
@@ -59,7 +55,7 @@ function f:PLAYER_ENTERING_WORLD()
         ["Priest"] = {"Silence"},
         ["Rogue"] = {"Kick"},
         ["Shaman"] = {"Wind Shear"},
-        ["Warlock"] = {"Spell Lock", "Optical Blast"},
+        ["Warlock"] = {"Spell Lock", "Optical Blast", "Axe Toss"},
         ["Warrior"] = {"Pummel"}
     }
     INTERRUPT_REMINDER_CLASS_INTERRUPT_SPELL = switch[playerClass]
