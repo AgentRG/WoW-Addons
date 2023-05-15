@@ -1,47 +1,22 @@
-local interruptReminder_ClassInterruptSpell -- Table of class spells that can interrupt
-local interruptReminder_SpellActionBarLocation -- Table of the interrupt spell in the action bars
-local interruptReminder_IsHighlighted -- Boolean to keep track of whether the spell has been highlighted
-local interruptReminder_InitialLoad -- Boolean for whether this is the first load (to counter some nil exceptions)
-local interruptReminder_AlreadyWarned -- Boolean to keep track if user has been warned about missing interrupt spell
-local interruptReminder_CurrentTargetCanBeAttacked -- Boolean to keep track whether the current target can be attacked
-local interruptReminder_ShowOverlayGlow = ActionButton_ShowOverlayGlow
-local interruptReminder_HideOverlayGlow = ActionButton_HideOverlayGlow
-
-local interruptReminder_InterruptSpellsSwitch = {
-    ['Death Knight'] = {'Mind Freeze', 'Asphyxiate', 'Strangulate', 'Death Grip'},
-    ['Demon Hunter'] = {'Disrupt'},
-    ['Druid'] = {'Skull Bash', 'Solar Beam'},
-    ['Evoker'] = {'Quell'},
-    ['Hunter'] = {'Counter Shot', 'Muzzle'},
-    ['Mage'] = {'Counterspell'},
-    ['Monk'] = {'Spear Hand Strike'},
-    ['Paladin'] = {'Rebuke', "Avenger's Shield"},
-    ['Priest'] = {'Silence'},
-    ['Rogue'] = {'Kick'},
-    ['Shaman'] = {'Wind Shear'},
-    ['Warlock'] = {'Spell Lock', 'Optical Blast', 'Axe Toss'},
-    ['Warrior'] = {'Pummel'}
-}
+local interruptReminder_Table = {}
 
 local f = CreateFrame('Frame', 'InterruptReminder')
+local LibButtonGlow = LibStub("LibButtonGlow-1.0")
 
 function f:OnEvent(event, ...)
     self[event](self, event, ...)
 end
 
---[[
-Scan all of the player action bars and find the slot location for all interrupting spells for the player's class.
-Found in: https://www.wowinterface.com/forums/showthread.php?t=45731 - modified a bit to meet the needs of this addon
---]]
-function FindInterruptSpell(spells)
+
+---Scan all of the player action bars and find the slot location for all interrupting spells for the player's class.
+--- Found in: https://www.wowinterface.com/forums/showthread.php?t=45731 - modified a bit to meet the needs of this addon
+local function find_all_interrupt_spell(spells)
     local actionBars = {'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft', 'MultiBar7', 'MultiBar6', 'MultiBar5'}
     local buttonLocations = {}
-    local lowerCases = {}
 
     for _, spell in ipairs(spells) do
         for _, barName in ipairs(actionBars) do
             for i = 1, 12 do
-                lowerCases = {}
                 local button = _G[barName .. 'Button' .. i]
                 local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
                 if HasAction(slot) then
@@ -50,9 +25,7 @@ function FindInterruptSpell(spells)
                         actionName = GetSpellInfo(id)
                     end
                     if actionName then
-                        table.insert(lowerCases, string.lower(actionName))
-                        table.insert(lowerCases, string.lower(spell))
-                        if string.match(lowerCases[1], lowerCases[2]) then
+                        if string.lower(actionName) == string.lower(spell) then
                             table.insert(buttonLocations, button)
                         end
                     end
@@ -64,147 +37,228 @@ function FindInterruptSpell(spells)
 end
 
 
--- Get the current cooldown on all interrupting spells and save their status to a table
-function InterruptReminder_GetSpellCooldowns()
-    local onCooldown = {}
+---Same as InterruptReminder_find_all_interrupt_spell, but for a single spell
+local function find_interrupt_spell(spell)
+    local actionBars = {'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft', 'MultiBar7', 'MultiBar6', 'MultiBar5'}
 
-    for _, spell in ipairs(interruptReminder_ClassInterruptSpell) do
-        local currentCooldown = GetSpellCooldown(spell)
-        table.insert(onCooldown, currentCooldown)
-    end
-    return onCooldown
-end
-
---[[
-Check whether the target is attackable, and for every spell the player class has, get the current cooldown status of
-that spell. If the interrupting spell is off cooldown, the target's spell being cast is not instant and is
-interruptible, then highlight the action bar slot of the spell. Otherwise (if not already), hide the highlight.
---]]
-function InterruptReminder_HandleActiveTargetSpellCasting(interruptSpells, startTime, endTime, notInterruptible)
-    if interruptReminder_CurrentTargetCanBeAttacked and not notInterruptible and startTime ~= nil and endTime ~= nil then
-        for _, cooldownedSpell in ipairs(interruptSpells) do
-            if cooldownedSpell == 0 then
-                if not interruptReminder_IsHighlighted then
-                    for _, location in ipairs(interruptReminder_SpellActionBarLocation) do
-                        interruptReminder_ShowOverlayGlow(location)
+    for _, barName in ipairs(actionBars) do
+        for i = 1, 12 do
+            local button = _G[barName .. 'Button' .. i]
+            local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
+            if HasAction(slot) then
+                local actionType, id, _, actionName = GetActionInfo(slot)
+                if actionType == 'spell' then
+                    actionName = GetSpellInfo(id)
+                end
+                if actionName then
+                    if string.lower(actionName) == string.lower(spell) then
+                        return button
                     end
-                    interruptReminder_IsHighlighted = true
                 end
             end
         end
-    else
-        for _, location in ipairs(interruptReminder_SpellActionBarLocation) do
-            interruptReminder_HideOverlayGlow(location)
-        end
-        interruptReminder_IsHighlighted = false
     end
 end
 
---[[
-In case the player switched targets, get whether the current target is either casting or channeling a spell that can
-be interrupted.
---]]
-function InterruptReminder_HandleSwitchedTargetSpellCasting()
-    local name, _, _, startTime, endTime, _, _, notInterruptible, _ = UnitCastingInfo('target')
 
+---Retrieves the cooldown status of a list of spells and their corresponding location on the action bar(s).
+---Returns two tables: one for spells ready to be cast and another for spells that are still on cool down.
+---Parameters:
+--- class_spells (table): A list of spell names (strings) to check the cooldown for.
+---Returns:
+--- readyToCast (table): A table of spells ready to be cast.
+--- stillOnCooldown (table): A table of spells still on cooldown.
+local function get_spell_cooldowns(class_spells)
+    local readyToCast = {}
+    local stillOnCooldown = {}
+
+    for i = 1, #class_spells do
+        local start, duration = GetSpellCooldown(class_spells[i])
+        local spellLocation = find_interrupt_spell(class_spells[i])
+        if start == 0 then
+            table.insert(readyToCast, {['cooldown']=start, ['location']=spellLocation})
+        end
+        if start ~= 0 then
+            -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
+            local calculateTimeRemaining = (start + duration - GetTime()) + 0.01
+            -- Safety check to ensure we don't save a negative number by mistake
+            if calculateTimeRemaining > 0 then
+                table.insert(stillOnCooldown, {['cooldown']=calculateTimeRemaining, ['location']=spellLocation})
+            end
+        end
+    end
+    return readyToCast, stillOnCooldown
+end
+
+
+---Checks if the target is casting interruptible or channeling a spell that can be interrupted.
+---Parameters:
+--- targetCanBeAttacked (boolean): Indicates whether the target can be attacked.
+---Returns:
+--- (boolean) Whether the target is casting or channeling a spell that can be interrupted.
+local function is_target_casting_interruptible_spell(targetCanBeAttacked)
+    local name, _, _, startTime, endTime, _, _, notInterruptible, _ = UnitCastingInfo('target')
     if name == nil then
         name, _, _, startTime, endTime, _, notInterruptible, _ = UnitChannelInfo('target')
     end
-    if name ~= nil then
-        InterruptReminder_HandleActiveTargetSpellCasting(InterruptReminder_GetSpellCooldowns(), startTime, endTime, notInterruptible)
+    return targetCanBeAttacked and not notInterruptible and startTime ~= nil and endTime ~= nil
+end
+
+
+---Handles the logic for highlighting interruptible spells on the active target (whether target can be interrupted is
+--- deduced during PLAYER_TARGET_CHANGED event).
+---In case a spell is not in cooldown, highlight the spell at its action bar location.
+---In case a spell is in cooldown, use C_Timer.After to check whether by the time it is off cooldown, that target
+--- can still be interrupted, in which case it will highlight the ability at its location.
+local function handle_active_target_spell_casting()
+    local targetHighlighted = interruptReminder_Table['IsHighlighted']
+    local readyToCast, stillOnCooldown = get_spell_cooldowns(interruptReminder_Table['ClassInterruptSpell'])
+
+    if is_target_casting_interruptible_spell(interruptReminder_Table['CurrentTargetCanBeAttacked']) then
+        for i = 1, #readyToCast do
+            if not targetHighlighted then
+                LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
+            end
+            interruptReminder_Table['IsHighlighted'] = true
+        end
+    end
+
+    for i = 1, #stillOnCooldown do
+        C_Timer.After(stillOnCooldown[i].cooldown, function()
+            targetHighlighted = interruptReminder_Table['IsHighlighted']
+            if is_target_casting_interruptible_spell(interruptReminder_Table['CurrentTargetCanBeAttacked']) then
+                    if not targetHighlighted then
+                        LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
+                    end
+                    interruptReminder_Table['IsHighlighted'] = true
+            end
+        end)
     end
 end
 
-function InterruptReminder_FilterCombatLogsForInterrupts()
-    local _, subEvent,_ , sourceGUID, _, _, _, destGUID, _, _, _, _, spellName = CombatLogGetCurrentEventInfo()
+
+---Filter combat logs to detect interrupts (or successful target casts) on the target to hide the highlighting on all spell action bar locations
+local function filter_combat_logs_for_interrupts()
+    local subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, _, spellName = select(2, CombatLogGetCurrentEventInfo())
+    local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
+    local spellActionBarLocation = interruptReminder_Table['SpellActionBarLocation']
+    local isHighlighted = interruptReminder_Table['IsHighlighted']
     local playerGUID = UnitGUID('player')
     local targetGUID = UnitGUID('target')
 
-    for _, spell in ipairs(interruptReminder_ClassInterruptSpell) do
-        if ((subEvent == 'SPELL_CAST_SUCCESS' and sourceGUID == playerGUID and spellName == spell)
-                or (subEvent == 'SPELL_CAST_SUCCESS' and sourceGUID == targetGUID)
-                or (subEvent == 'SPELL_INTERRUPT') and sourceGUID ~= playerGUID
-                and destGUID == targetGUID) then
-            for _, location in ipairs(interruptReminder_SpellActionBarLocation) do
-                interruptReminder_HideOverlayGlow(location)
+    -- Used to determine interrupt cases
+    local spellCastSuccessEvent = (subEvent == 'SPELL_CAST_SUCCESS')
+    local isPlayerSource = (sourceGUID == playerGUID)
+    local isTargetSource = (sourceGUID == targetGUID)
+    local isInterruptEvent = (subEvent == 'SPELL_INTERRUPT')
+    local isOutsideInterrupt = (sourceGUID ~= playerGUID and destGUID == targetGUID)
+
+    for _, spell in ipairs(classInterruptSpells) do
+        if ((spellCastSuccessEvent and isPlayerSource and spellName == spell)
+                or (spellCastSuccessEvent and isTargetSource)
+                or (isInterruptEvent and isOutsideInterrupt))then
+            if isHighlighted then
+                for _, location in ipairs(spellActionBarLocation) do
+                    LibButtonGlow.HideOverlayGlow(location)
+                end
             end
-            interruptReminder_IsHighlighted = false
+            interruptReminder_Table['IsHighlighted'] = false
+            break
         end
     end
 end
 
 
---[[
-On initial load (and when there's a loading screen), read the player class, use a makeshift switch to generate a
-list that class' interrupting spells, and find their location in the action bars
---]]
+---Triggers when the player enters the world (or any phase, or on /reload)
 function f:PLAYER_ENTERING_WORLD()
     local playerClass = UnitClass('player')
+    -- Makeshift switch to map each class' interrupt spells to a class
+    local interruptReminder_InterruptSpellsSwitch = {
+        ['Death Knight'] = {'Mind Freeze', 'Asphyxiate', 'Strangulate', 'Death Grip'},
+        ['Demon Hunter'] = {'Disrupt'},
+        ['Druid'] = {'Skull Bash', 'Solar Beam'},
+        ['Evoker'] = {'Quell'},
+        ['Hunter'] = {'Counter Shot', 'Muzzle'},
+        ['Mage'] = {'Counterspell'},
+        ['Monk'] = {'Spear Hand Strike'},
+        ['Paladin'] = {'Rebuke', "Avenger's Shield"},
+        ['Priest'] = {'Silence'},
+        ['Rogue'] = {'Kick'},
+        ['Shaman'] = {'Wind Shear'},
+        ['Warlock'] = {'Spell Lock', 'Optical Blast', 'Axe Toss'},
+        ['Warrior'] = {'Pummel'}
+    }
+    -- Grab the player's interrupt spells based on playerClass and the makeshift switch
+    interruptReminder_Table['ClassInterruptSpell'] = interruptReminder_InterruptSpellsSwitch[playerClass]
 
-    interruptReminder_ClassInterruptSpell = interruptReminder_InterruptSpellsSwitch[playerClass]
-    interruptReminder_SpellActionBarLocation = FindInterruptSpell(interruptReminder_ClassInterruptSpell)
-    interruptReminder_IsHighlighted = false
-    interruptReminder_AlreadyWarned = false
-    if ipairs(interruptReminder_SpellActionBarLocation) == nil then
-        print("|cffffff00Warning (InterruptReminder): |cffffffffInterrupting spell(s) |" .. table.concat(interruptReminder_ClassInterruptSpell, ", ") .. "| not found in the action bar. Please move one to an action bar.")
+    -- Find the location of those spells on the action bars
+    interruptReminder_Table['SpellActionBarLocation'] = find_all_interrupt_spell(interruptReminder_Table['ClassInterruptSpell'])
+
+    -- Initial values for interruptReminder_Table
+    interruptReminder_Table['IsHighlighted'] = false
+    interruptReminder_Table['AlreadyWarned'] = false
+    interruptReminder_Table['CurrentTargetCanBeAttacked'] = false
+
+    -- Check if the action bars do not contain any interrupt spell, in which case a warning will be thrown
+    if next(interruptReminder_Table['SpellActionBarLocation']) == nil then
+        local tableConcat = table.concat(interruptReminder_Table['ClassInterruptSpell'], ", ")
+        print("|cffffff00Warning (InterruptReminder): |cffffffffInterrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
         if playerClass == 'Warlock' then
             print("|cffffff00Info (InterruptReminder): |cffffffffDetcted that player class is " .. playerClass .. ". Please move the interrupt ability to one of the action bars (not pet action bar) for AddOn to function correctly.")
         end
-        interruptReminder_AlreadyWarned = true
+        interruptReminder_Table['AlreadyWarned'] = true
     end
-    interruptReminder_InitialLoad = true
+    interruptReminder_Table['InitialLoad'] = true
 end
 
--- Unit starts casting a spell, executes InterruptReminder_HighlightInterruptSpells, which handles ability highlighting
-function f:UNIT_SPELLCAST_START()
-    local _, _, _, startTime, endTime, _, _, notInterruptible, _ = UnitCastingInfo('target')
+function f:UNIT_SPELLCAST_START() handle_active_target_spell_casting() end
 
-    InterruptReminder_HandleActiveTargetSpellCasting(InterruptReminder_GetSpellCooldowns(), startTime, endTime, notInterruptible)
-end
+function f:UNIT_SPELLCAST_CHANNEL_START() handle_active_target_spell_casting() end
 
--- Same as UNIT_SPELLCAST_START but for channeling spells
-function f:UNIT_SPELLCAST_CHANNEL_START()
-    local _, _, _, startTime, endTime, _, notInterruptible, _ = UnitChannelInfo('target')
+function f:COMBAT_LOG_EVENT_UNFILTERED() filter_combat_logs_for_interrupts() end
 
-    InterruptReminder_HandleActiveTargetSpellCasting(InterruptReminder_GetSpellCooldowns(), startTime, endTime, notInterruptible)
-end
 
---[[
-If the player has cast his interrupt spell, the target has finished casting his spell, or someone else has interrupted
-the target, then remove the overlay.
---]]
-function f:COMBAT_LOG_EVENT_UNFILTERED()
-    InterruptReminder_FilterCombatLogsForInterrupts()
-end
-
---[[
-If the player changed the target, hide the overlay glow, get information about the new target and execute
-InterruptReminder_HandleSwitchedTargetActiveCasting, which handles ongoing castings/channeling of new target
---]]
+---Triggers when the player changes his target (or gains one)
 function f:PLAYER_TARGET_CHANGED()
-    if interruptReminder_IsHighlighted then
-        for _, location in ipairs(interruptReminder_SpellActionBarLocation) do
-            interruptReminder_HideOverlayGlow(location)
+    local targetHighlighted = interruptReminder_Table['IsHighlighted']
+    local spellActionBarLocation = interruptReminder_Table['SpellActionBarLocation']
+
+    -- If the interrupt spells were already highlighted, unhighlight them all.
+    if targetHighlighted then
+        for _, location in ipairs(spellActionBarLocation) do
+            LibButtonGlow.HideOverlayGlow(location)
         end
-        interruptReminder_IsHighlighted = false
+        interruptReminder_Table['IsHighlighted'] = false
     end
+
+    -- Check if the target is valid to attack by the player (e.g. not a friendly player, friendly npc, a pet...)
     if UnitCanAttack('player', 'target') then
-        interruptReminder_CurrentTargetCanBeAttacked = true
+        interruptReminder_Table['CurrentTargetCanBeAttacked'] = true
     else
-        interruptReminder_CurrentTargetCanBeAttacked = false
+        interruptReminder_Table['CurrentTargetCanBeAttacked'] = false
     end
-    InterruptReminder_HandleSwitchedTargetSpellCasting()
+
+    -- When the player gains his initial target or switches to a target, check whether the target is casting an
+    -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
+    handle_active_target_spell_casting()
 end
 
--- Fires when the player has updates his action bar to get the new location of the interrupting spell
+
+---Triggers when the player updates his action bar. Checks if the interrupt spells are still there and throws a warning
+--- if they are missing. Warning will not be thrown as long as at least one is present.
 function f:ACTIONBAR_SLOT_CHANGED()
-    if interruptReminder_InitialLoad then
-        if next(interruptReminder_ClassInterruptSpell) ~= nil then
-            interruptReminder_SpellActionBarLocation = FindInterruptSpell(interruptReminder_ClassInterruptSpell)
+    local initialLoad = interruptReminder_Table['InitialLoad']
+    local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
+    local alreadyWarned = interruptReminder_Table['AlreadyWarned']
+
+    if initialLoad then
+        if next(classInterruptSpells) ~= nil then
+            interruptReminder_Table['SpellActionBarLocation'] = find_all_interrupt_spell(classInterruptSpells)
         end
-        if next(interruptReminder_SpellActionBarLocation) == nil and not interruptReminder_AlreadyWarned then
-            print("|cffffff00Warning (InterruptReminder): |cffffffffInterrupting spell(s) |" .. table.concat(interruptReminder_ClassInterruptSpell, ", ") .. "| not found in the action bar. Please move one to an action bar.")
-            interruptReminder_AlreadyWarned = true
+        if next(interruptReminder_Table['SpellActionBarLocation']) == nil and not alreadyWarned then
+            local tableConcat = table.concat(interruptReminder_Table['ClassInterruptSpell'], ", ")
+            print("|cffffff00Warning (InterruptReminder): |cffffffffInterrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
+            interruptReminder_Table['AlreadyWarned'] = true
         end
     end
 end
