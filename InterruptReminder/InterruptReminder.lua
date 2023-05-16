@@ -75,10 +75,10 @@ local function get_spell_cooldowns(class_spells)
     for i = 1, #class_spells do
         local start, duration = GetSpellCooldown(class_spells[i])
         local spellLocation = find_interrupt_spell(class_spells[i])
-        if start == 0 then
+        if start == 0 and start then
             table.insert(readyToCast, {['cooldown']=start, ['location']=spellLocation})
         end
-        if start ~= 0 then
+        if start ~= 0 and start then
             -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
             local calculateTimeRemaining = (start + duration - GetTime()) + 0.01
             -- Safety check to ensure we don't save a negative number by mistake
@@ -234,13 +234,12 @@ function f:PLAYER_TARGET_CHANGED()
     -- Check if the target is valid to attack by the player (e.g. not a friendly player, friendly npc, a pet...)
     if UnitCanAttack('player', 'target') then
         interruptReminder_Table['CurrentTargetCanBeAttacked'] = true
+        -- When the player gains his initial target or switches to a target, check whether the target is casting an
+        -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
+        handle_active_target_spell_casting()
     else
         interruptReminder_Table['CurrentTargetCanBeAttacked'] = false
     end
-
-    -- When the player gains his initial target or switches to a target, check whether the target is casting an
-    -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
-    handle_active_target_spell_casting()
 end
 
 
