@@ -3,10 +3,6 @@ local interruptReminder_Table = {}
 local f = CreateFrame('Frame', 'InterruptReminder')
 local LibButtonGlow = LibStub("LibButtonGlow-1.0")
 
-function f:OnEvent(event, ...)
-    self[event](self, event, ...)
-end
-
 
 ---Scan all of the player action bars and find the slot location for all interrupting spells for the player's class.
 --- Found in: https://www.wowinterface.com/forums/showthread.php?t=45731 - modified a bit to meet the needs of this addon
@@ -37,7 +33,8 @@ local function find_all_interrupt_spell(spells)
 end
 
 
----Same as InterruptReminder_find_all_interrupt_spell, but for a single spell
+---Same as InterruptReminder_find_all_interrupt_spell, but for a single spell. Used when the callback handler is called
+--- in case a spell was on cooldown.
 local function find_interrupt_spell(spell)
     local actionBars = {'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft', 'MultiBar7', 'MultiBar6', 'MultiBar5'}
 
@@ -105,16 +102,27 @@ local function is_target_casting_interruptible_spell(targetCanBeAttacked)
 end
 
 
----Handles the logic for highlighting interruptible spells on the active target (whether target can be interrupted is
+---Handles the unhighlight of the interrupt spells. Executes only if the spells are already highlighted.
+local function handle_target_stopped_casting()
+    if interruptReminder_Table['IsHighlighted'] then
+        for _, location in ipairs(interruptReminder_Table['SpellActionBarLocation']) do
+            LibButtonGlow.HideOverlayGlow(location)
+        end
+        interruptReminder_Table['IsHighlighted'] = false
+    end
+end
+
+
+---Handles the logic for highlighting interruptible spells on the current target (whether target can be interrupted is
 --- deduced during PLAYER_TARGET_CHANGED event).
 ---In case a spell is not in cooldown, highlight the spell at its action bar location.
 ---In case a spell is in cooldown, use C_Timer.After to check whether by the time it is off cooldown, that target
 --- can still be interrupted, in which case it will highlight the ability at its location.
-local function handle_active_target_spell_casting()
+local function handle_current_target_spell_casting()
     local targetHighlighted = interruptReminder_Table['IsHighlighted']
-    local readyToCast, stillOnCooldown = get_spell_cooldowns(interruptReminder_Table['ClassInterruptSpell'])
 
     if is_target_casting_interruptible_spell(interruptReminder_Table['CurrentTargetCanBeAttacked']) then
+        local readyToCast = get_spell_cooldowns(interruptReminder_Table['ClassInterruptSpell'])
         for i = 1, #readyToCast do
             if not targetHighlighted then
                 LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
@@ -123,54 +131,25 @@ local function handle_active_target_spell_casting()
         end
     end
 
+    local stillOnCooldown = select(2, get_spell_cooldowns(interruptReminder_Table['ClassInterruptSpell']))
     for i = 1, #stillOnCooldown do
         C_Timer.After(stillOnCooldown[i].cooldown, function()
             targetHighlighted = interruptReminder_Table['IsHighlighted']
             if is_target_casting_interruptible_spell(interruptReminder_Table['CurrentTargetCanBeAttacked']) then
-                    if not targetHighlighted then
-                        LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
-                    end
-                    interruptReminder_Table['IsHighlighted'] = true
+                if not targetHighlighted then
+                    LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
+                end
+                interruptReminder_Table['IsHighlighted'] = true
             end
         end)
     end
 end
 
 
----Filter combat logs to detect interrupts (or successful target casts) on the target to hide the highlighting on all spell action bar locations
-local function filter_combat_logs_for_interrupts()
-    local subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, _, spellName = select(2, CombatLogGetCurrentEventInfo())
-    local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
-    local spellActionBarLocation = interruptReminder_Table['SpellActionBarLocation']
-    local isHighlighted = interruptReminder_Table['IsHighlighted']
-    local playerGUID = UnitGUID('player')
-    local targetGUID = UnitGUID('target')
-
-    -- Used to determine interrupt cases
-    local spellCastSuccessEvent = (subEvent == 'SPELL_CAST_SUCCESS')
-    local isPlayerSource = (sourceGUID == playerGUID)
-    local isTargetSource = (sourceGUID == targetGUID)
-    local isInterruptEvent = (subEvent == 'SPELL_INTERRUPT')
-    local isOutsideInterrupt = (sourceGUID ~= playerGUID and destGUID == targetGUID)
-
-    for _, spell in ipairs(classInterruptSpells) do
-        if ((spellCastSuccessEvent and isPlayerSource and spellName == spell)
-                or (spellCastSuccessEvent and isTargetSource)
-                or (isInterruptEvent and isOutsideInterrupt))then
-            if isHighlighted then
-                for _, location in ipairs(spellActionBarLocation) do
-                    LibButtonGlow.HideOverlayGlow(location)
-                end
-            end
-            interruptReminder_Table['IsHighlighted'] = false
-            break
-        end
-    end
-end
-
-
----Triggers when the player enters the world (or any phase, or on /reload)
-function f:PLAYER_ENTERING_WORLD()
+---Handles the logic for when the enter players the world (initial login, phase change, or /reload). Grabs the player
+--- class and gets the class' interrupt spells via a makeshift switch. Then saves some default values and checks
+--- whether the action bars contain any of the interrupting spells. Throws a warning if there's no spell found.
+local function handle_player_entering_world()
     local playerClass = UnitClass('player')
     -- Makeshift switch to map each class' interrupt spells to a class
     local interruptReminder_InterruptSpellsSwitch = {
@@ -211,50 +190,47 @@ function f:PLAYER_ENTERING_WORLD()
     interruptReminder_Table['InitialLoad'] = true
 end
 
-function f:UNIT_SPELLCAST_START() handle_active_target_spell_casting() end
 
-function f:UNIT_SPELLCAST_CHANNEL_START() handle_active_target_spell_casting() end
+---Handles combat logs to detect successful spell cast from the target. Executes spell unhighlight.
+local function handle_target_cast_spell()
+    local subEvent, _, sourceGUID = select(2, CombatLogGetCurrentEventInfo())
 
-function f:COMBAT_LOG_EVENT_UNFILTERED() filter_combat_logs_for_interrupts() end
+    if subEvent == 'SPELL_CAST_SUCCESS' and sourceGUID == UnitGUID('target') then
+        handle_target_stopped_casting()
+    end
+end
 
 
----Triggers when the player changes his target (or gains one)
-function f:PLAYER_TARGET_CHANGED()
-    local targetHighlighted = interruptReminder_Table['IsHighlighted']
-    local spellActionBarLocation = interruptReminder_Table['SpellActionBarLocation']
+---Handles the logic for when the player switches his targets. Unhighlight all spells and check whether the new target
+--- is in the process of spell casting already and act accordingly.
+local function handle_player_switching_targets()
 
     -- If the interrupt spells were already highlighted, unhighlight them all.
-    if targetHighlighted then
-        for _, location in ipairs(spellActionBarLocation) do
-            LibButtonGlow.HideOverlayGlow(location)
-        end
-        interruptReminder_Table['IsHighlighted'] = false
-    end
+    handle_target_stopped_casting()
 
     -- Check if the target is valid to attack by the player (e.g. not a friendly player, friendly npc, a pet...)
     if UnitCanAttack('player', 'target') then
         interruptReminder_Table['CurrentTargetCanBeAttacked'] = true
         -- When the player gains his initial target or switches to a target, check whether the target is casting an
         -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
-        handle_active_target_spell_casting()
+        handle_current_target_spell_casting()
     else
         interruptReminder_Table['CurrentTargetCanBeAttacked'] = false
     end
 end
 
 
----Triggers when the player updates his action bar. Checks if the interrupt spells are still there and throws a warning
---- if they are missing. Warning will not be thrown as long as at least one is present.
-function f:ACTIONBAR_SLOT_CHANGED()
+---Handles the logic for when the player updates his action bar. Just checks to make sure he has at least one interrupt
+--- available in his action bars.
+local function handle_player_changing_his_action_bar()
     local initialLoad = interruptReminder_Table['InitialLoad']
-    local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
-    local alreadyWarned = interruptReminder_Table['AlreadyWarned']
 
-    if initialLoad then
+    if initialLoad then 
+        local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
         if next(classInterruptSpells) ~= nil then
             interruptReminder_Table['SpellActionBarLocation'] = find_all_interrupt_spell(classInterruptSpells)
         end
-        if next(interruptReminder_Table['SpellActionBarLocation']) == nil and not alreadyWarned then
+        if next(interruptReminder_Table['SpellActionBarLocation']) == nil and not interruptReminder_Table['AlreadyWarned'] then
             local tableConcat = table.concat(interruptReminder_Table['ClassInterruptSpell'], ", ")
             print("|cffffff00Warning (InterruptReminder): |cffffffffInterrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
             interruptReminder_Table['AlreadyWarned'] = true
@@ -262,9 +238,29 @@ function f:ACTIONBAR_SLOT_CHANGED()
     end
 end
 
+
+function f:OnEvent(event, ...)
+    if event == 'PLAYER_ENTERING_WORLD' then handle_player_entering_world() end
+    if (event == 'UNIT_SPELLCAST_INTERRUPTED'
+            or event == 'UNIT_SPELLCAST_STOP'
+            or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then
+        handle_target_stopped_casting()
+    end
+    if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then
+        handle_current_target_spell_casting()
+    end
+    if event == 'COMBAT_LOG_EVENT_UNFILTERED' then handle_target_cast_spell() end
+    if event == 'PLAYER_TARGET_CHANGED' then handle_player_switching_targets() end
+    if event == 'ACTIONBAR_SLOT_CHANGED' then handle_player_changing_his_action_bar() end
+end
+
+
 f:RegisterEvent('PLAYER_ENTERING_WORLD')
 f:RegisterEvent('UNIT_SPELLCAST_START')
 f:RegisterEvent('UNIT_SPELLCAST_CHANNEL_START')
+f:RegisterEvent('UNIT_SPELLCAST_INTERRUPTED')
+f:RegisterEvent('UNIT_SPELLCAST_STOP')
+f:RegisterEvent('UNIT_SPELLCAST_CHANNEL_STOP')
 f:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
 f:RegisterEvent('PLAYER_TARGET_CHANGED')
 f:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
