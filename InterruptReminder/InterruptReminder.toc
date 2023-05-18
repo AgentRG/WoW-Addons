@@ -1,5 +1,5 @@
 ## Interface: 100100
-## Version: 1.2.0
+## Version: 1.2.2
 ## Title: Interrupt Reminder
 ## Author: AgentRG
 ## OptionalDeps: LibButtonGlow-1.0
