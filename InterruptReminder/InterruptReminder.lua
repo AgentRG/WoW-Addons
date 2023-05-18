@@ -98,7 +98,12 @@ local function is_target_casting_interruptible_spell(targetCanBeAttacked)
     if name == nil then
         name, _, _, startTime, endTime, _, notInterruptible, _ = UnitChannelInfo('target')
     end
-    return targetCanBeAttacked and not notInterruptible and startTime ~= nil and endTime ~= nil
+    -- Safety measure to make sure a nil is not returned somehow
+    if name ~= nil then
+        return targetCanBeAttacked and not notInterruptible and startTime ~= nil and endTime ~= nil
+    else
+        return false
+    end
 end
 
 
@@ -191,16 +196,6 @@ local function handle_player_entering_world()
 end
 
 
----Handles combat logs to detect successful spell cast from the target. Executes spell unhighlight.
-local function handle_target_cast_spell()
-    local subEvent, _, sourceGUID = select(2, CombatLogGetCurrentEventInfo())
-
-    if subEvent == 'SPELL_CAST_SUCCESS' and sourceGUID == UnitGUID('target') then
-        handle_target_stopped_casting()
-    end
-end
-
-
 ---Handles the logic for when the player switches his targets. Unhighlight all spells and check whether the new target
 --- is in the process of spell casting already and act accordingly.
 local function handle_player_switching_targets()
@@ -223,9 +218,8 @@ end
 ---Handles the logic for when the player updates his action bar. Just checks to make sure he has at least one interrupt
 --- available in his action bars.
 local function handle_player_changing_his_action_bar()
-    local initialLoad = interruptReminder_Table['InitialLoad']
 
-    if initialLoad then 
+    if interruptReminder_Table['InitialLoad'] then
         local classInterruptSpells = interruptReminder_Table['ClassInterruptSpell']
         if next(classInterruptSpells) ~= nil then
             interruptReminder_Table['SpellActionBarLocation'] = find_all_interrupt_spell(classInterruptSpells)
@@ -241,15 +235,8 @@ end
 
 function f:OnEvent(event, ...)
     if event == 'PLAYER_ENTERING_WORLD' then handle_player_entering_world() end
-    if (event == 'UNIT_SPELLCAST_INTERRUPTED'
-            or event == 'UNIT_SPELLCAST_STOP'
-            or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then
-        handle_target_stopped_casting()
-    end
-    if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then
-        handle_current_target_spell_casting()
-    end
-    if event == 'COMBAT_LOG_EVENT_UNFILTERED' then handle_target_cast_spell() end
+    if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then handle_current_target_spell_casting() end
+    if (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then handle_target_stopped_casting() end
     if event == 'PLAYER_TARGET_CHANGED' then handle_player_switching_targets() end
     if event == 'ACTIONBAR_SLOT_CHANGED' then handle_player_changing_his_action_bar() end
 end
