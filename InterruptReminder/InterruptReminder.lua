@@ -63,6 +63,7 @@ IR_Table.InterruptSpellsSwitch = {
     ['Warrior'] = {'Pummel'}
 }
 IR_Table.CCSpellsSwitch = {}
+IR_Table.CCActionBarSlot = {}
 IR_Table.DungeonBoss_Names = nil
 IR_Table.InitialLoadDone = false
 local f = CreateFrame('Frame', 'InterruptReminder')
@@ -202,6 +203,22 @@ function IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(slot)
         if InterruptReminder_IsInit then
             for _, value in ipairs(IR_Table.InterruptActionBarSlot) do
                 table.insert(action_bar_slots, value)
+            end
+
+            if next(IR_Table.CCActionBarSlot) == nil and IR_Table.InitialLoadDone == true then
+                IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+                IR_Table.generate_cc_spells_table_from_spellbook()
+                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+                local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
+                IR_Table.CCActionBarTable = i
+                IR_Table.CCActionBarSlot = c
+                IR_Table.InitialCCLoadDone = true
+                for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                end
+                for _, value in ipairs(IR_Table.ClassCCSpell) do
+                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                end
             end
 
             for _, value in ipairs(IR_Table.CCActionBarSlot) do
