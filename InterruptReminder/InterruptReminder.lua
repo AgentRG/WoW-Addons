@@ -272,6 +272,10 @@ function IR_Table.is_target_a_boss()
     if InterruptReminder_IsInit then
         local targetName = GetUnitName('target', false)
 
+        if targetName then
+            targetName = string.lower(targetName)
+        end
+
         -- Safety measure to make sure current_dungeon_map_id is defined as either a valid dungeon id or false
         if IR_Table.current_dungeon_map_id == nil then
             IR_Table.is_dungeon_instance()
@@ -418,7 +422,9 @@ end
 
 ---Handles the unhighlight of spells.
 function IR_Table.handle_target_stopped_casting()
-    IR_Table.handle_player_changing_his_action_bar()
+    if IR_Table.PlayerInCombat == true then
+        IR_Table.handle_player_changing_his_action_bar()
+    end
     for _, location in ipairs(IR_Table.InterruptActionBarTable) do
         LibButtonGlow.HideOverlayGlow(location)
     end
