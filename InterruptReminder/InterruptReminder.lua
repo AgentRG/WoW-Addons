@@ -418,6 +418,7 @@ end
 
 ---Handles the unhighlight of spells.
 function IR_Table.handle_target_stopped_casting()
+    IR_Table.handle_player_changing_his_action_bar()
     for _, location in ipairs(IR_Table.InterruptActionBarTable) do
         LibButtonGlow.HideOverlayGlow(location)
     end
@@ -527,6 +528,7 @@ function IR_Table.handle_player_entering_world()
         IR_Table.AlreadyWarned = false
         IR_Table.TargetCanBeStunned = false
         IR_Table.CurrentTargetCanBeAttacked = false
+        IR_Table.PlayerInCombat = false
 
 
         -- Check if the action bars do not contain any interrupt spell, in which case a warning will be thrown
@@ -555,20 +557,37 @@ end
 --- available in his action bars and updated their locations.
 function IR_Table.handle_player_changing_his_action_bar()
     if IR_Table.InitialLoadDone then
-        local classInterruptSpells = IR_Table.ClassInterruptSpell
-        if #classInterruptSpells ~= 0 then
-            IR_Table.InterruptActionBarTable = IR_Table.find_all_interrupt_spell(classInterruptSpells)
+        -- Grab the player's interrupt spells based on playerClass and the makeshift switch
+        IR_Table.ClassInterruptSpell = IR_Table.InterruptSpellsSwitch[playerClass]
+
+        -- Find the location of those spells on the action bars
+        local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
+        IR_Table.InterruptActionBarTable = j
+        IR_Table.InterruptActionBarSlot = k
+
+        -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
+        if InterruptReminder_IsInit == true then
+            --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
+            execute once the game is in a playable state]]
+            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+            IR_Table.generate_cc_spells_table_from_spellbook()
+            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+            local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
+            IR_Table.CCActionBarTable = i
+            IR_Table.CCActionBarSlot = c
+            IR_Table.InitialCCLoadDone = true
+            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+            end
+            for _, value in ipairs(IR_Table.ClassCCSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+            end
         end
-        if #IR_Table.InterruptActionBarTable == 0 and not IR_Table.AlreadyWarned then
+
+        if IR_Table.InterruptActionBarTable == 0 and not IR_Table.AlreadyWarned then
             local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
             printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
             IR_Table.AlreadyWarned = true
-        end
-        if InterruptReminder_IsInit and IR_Table.InitialCCLoadDone then
-            local classCCSpells = IR_Table.ClassCCSpell
-            if #classCCSpells ~= 0 then
-                IR_Table.CCActionBarTable = IR_Table.find_all_interrupt_spell(classCCSpells)
-            end
         end
     end
 end
@@ -620,13 +639,19 @@ function IR_Table.handle_player_switching_targets()
 end
 
 
+function IR_Table.handle_player_entering_combat() IR_Table.PlayerInCombat = true end
+function IR_Table.handle_player_leaving_combat() IR_Table.PlayerInCombat = false end
+
+
 function f:OnEvent(event, ...)
     if event == 'PLAYER_ENTERING_WORLD' then IR_Table.handle_player_entering_world() end
     if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then IR_Table.handle_current_target_spell_casting() end
     if (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then IR_Table.handle_target_stopped_casting() end
     if event == 'PLAYER_TARGET_CHANGED' then IR_Table.handle_player_switching_targets() end
-    if event == 'ACTIONBAR_SLOT_CHANGED' and IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(...) then IR_Table.handle_player_changing_his_action_bar() end
+    if event == 'ACTIONBAR_SLOT_CHANGED' and IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(...) and IR_Table.PlayerInCombat == false then IR_Table.handle_player_changing_his_action_bar() end
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') and InterruptReminder_IsInit then IR_Table.handle_zone_changed() end
+    if event == 'PLAYER_REGEN_DISABLED' then IR_Table.handle_player_entering_combat() end
+    if event == 'PLAYER_REGEN_ENABLED' then IR_Table.handle_player_leaving_combat() end
 end
 
 
@@ -641,4 +666,6 @@ f:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
+f:RegisterEvent('PLAYER_REGEN_DISABLED')
+f:RegisterEvent('PLAYER_REGEN_ENABLED')
 f:SetScript('OnEvent', f.OnEvent)
