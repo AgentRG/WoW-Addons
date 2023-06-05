@@ -401,6 +401,19 @@ function IR_Table.get_spell_cooldowns(spells_table)
 end
 
 
+---Check if two tables are equal before continuing with the function which this used in.
+function IR_Table.are_two_tables_equal(t1, t2)
+    if #t1 ~= #t2 then return false end
+
+    for k, v in pairs(t1) do
+        if v ~= t2[k] then
+            return false
+        end
+    end
+    return true
+end
+
+
 ---Checks if the target is casting or channeling a spell.
 ---Parameters:
 --- targetCanBeAttacked (boolean): Indicates whether the target can be attacked.
@@ -563,30 +576,37 @@ end
 --- available in his action bars and updated their locations.
 function IR_Table.handle_player_changing_his_action_bar()
     if IR_Table.InitialLoadDone then
-        -- Grab the player's interrupt spells based on playerClass and the makeshift switch
-        IR_Table.ClassInterruptSpell = IR_Table.InterruptSpellsSwitch[playerClass]
+        local i, c
 
         -- Find the location of those spells on the action bars
         local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
-        IR_Table.InterruptActionBarTable = j
-        IR_Table.InterruptActionBarSlot = k
+        if IR_Table.are_two_tables_equal(j, IR_Table.InterruptActionBarTable) == false then
+            break
+        else
+            i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
+            if IR_Table.are_two_tables_equal(i, IR_Table.CCActionBarTable) == false then
+                break
+            else
+                IR_Table.InterruptActionBarTable = j
+                IR_Table.InterruptActionBarSlot = k
 
-        -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
-        if InterruptReminder_IsInit == true then
-            --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
-            execute once the game is in a playable state]]
-            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-            IR_Table.generate_cc_spells_table_from_spellbook()
-            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-            local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-            IR_Table.CCActionBarTable = i
-            IR_Table.CCActionBarSlot = c
-            IR_Table.InitialCCLoadDone = true
-            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-            end
-            for _, value in ipairs(IR_Table.ClassCCSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
+                if InterruptReminder_IsInit == true then
+                    --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
+                    execute once the game is in a playable state]]
+                    IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+                    IR_Table.generate_cc_spells_table_from_spellbook()
+                    IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+                    IR_Table.CCActionBarTable = i
+                    IR_Table.CCActionBarSlot = c
+                    IR_Table.InitialCCLoadDone = true
+                    for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                        table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                    end
+                    for _, value in ipairs(IR_Table.ClassCCSpell) do
+                        table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                    end
+                end
             end
         end
 
