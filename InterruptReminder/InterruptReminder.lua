@@ -2,6 +2,7 @@ SLASH_INTERRUPT_REMINDER_INIT1 = "/irinit"
 SLASH_INTERRUPT_REMINDER_PRINT1 = "/irprint"
 SLASH_INTERRUPT_REMINDER_DEL1 = "/irdel"
 SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
+SLASH_INTERRUPT_REMINDER_DEBUG1 = "/irdebug"
 
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {}
@@ -107,6 +108,23 @@ local function printInfo(text) print("|cff00ffffInfo (InterruptReminder): |cffff
 local function printWarning(text) print("|cffffff00Warning (InterruptReminder): |cffffffff"..text) end
 
 
+---Slash command to print the contents of IR_Table excluding functions and static content. Used for debugging.
+SlashCmdList.INTERRUPT_REMINDER_DEBUG = function()
+    for j, k in pairs(IR_Table) do
+        if type(k) ~= "function" and j ~= 'InterruptSpellsSwitch' and j ~= 'ActionBars' and j ~= 'CrownControlTypes' and j ~= 'ExtraneousCCSpells' then
+            if type(k) == "table" then
+                print(j, '(Table)')
+                for o, p in pairs(k) do
+                    print(' '..o, p)
+                end
+            else
+                print(j, k)
+            end
+        end
+    end
+end
+
+
 ---Slash command that will initialize tracking of Crowd Control spells
 SlashCmdList.INTERRUPT_REMINDER_INIT = function()
     if not InterruptReminder_IsInit then
@@ -124,6 +142,7 @@ SlashCmdList.INTERRUPT_REMINDER_HELP = function()
     print("/irinit: Opt-in for additional tracking of your class' Crowd Control spells.")
     print("/irprint: Print all currently tracked Crowd Control spells as well as the class interrupt spell.")
     print("/irdel: Opt-out of the additional tracking and revert back to only tracking the class interrupt.")
+    print("/irdebug: Print all currently stored content inside the add-on's local table (except for static variables)")
 end
 
 
@@ -245,13 +264,13 @@ function IR_Table.is_dungeon_instance()
     if currentMapId then
         local mapInfo = C_Map.GetMapInfo(currentMapId)
         if mapInfo and mapInfo.mapType == Enum.UIMapType.Dungeon then
-            IR_Table.current_dungeon_map_id = currentMapId
+            IR_Table.CurrentDungeonMapId = currentMapId
         else
-            IR_Table.current_dungeon_map_id = false
+            IR_Table.CurrentDungeonMapId = false
         end
         return
     else
-        IR_Table.current_dungeon_map_id = false
+        IR_Table.CurrentDungeonMapId = false
     end
 end
 
@@ -277,12 +296,12 @@ function IR_Table.is_target_a_boss()
         end
 
         -- Safety measure to make sure current_dungeon_map_id is defined as either a valid dungeon id or false
-        if IR_Table.current_dungeon_map_id == nil then
+        if IR_Table.CurrentDungeonMapId == nil then
             IR_Table.is_dungeon_instance()
         end
 
         -- Check to see if the user is currently in a dungeon
-        if IR_Table.current_dungeon_map_id ~= false then
+        if IR_Table.CurrentDungeonMapId ~= false then
 
             -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
             if IR_Table.DungeonBoss_Names == nil then
@@ -548,6 +567,7 @@ function IR_Table.handle_player_entering_world()
         IR_Table.TargetCanBeStunned = false
         IR_Table.CurrentTargetCanBeAttacked = false
         IR_Table.PlayerInCombat = false
+        IR_Table.TablesAreSame = false
 
 
         -- Check if the action bars do not contain any interrupt spell, in which case a warning will be thrown
@@ -581,39 +601,43 @@ function IR_Table.handle_player_changing_his_action_bar()
         -- Find the location of those spells on the action bars
         local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
         if IR_Table.are_two_tables_equal(j, IR_Table.InterruptActionBarTable) == false then
-            break
+            IR_Table.TablesAreSame = true
         else
             i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
             if IR_Table.are_two_tables_equal(i, IR_Table.CCActionBarTable) == false then
-                break
+                IR_Table.TablesAreSame = true
             else
-                IR_Table.InterruptActionBarTable = j
-                IR_Table.InterruptActionBarSlot = k
-
-                -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
-                if InterruptReminder_IsInit == true then
-                    --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
-                    execute once the game is in a playable state]]
-                    IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-                    IR_Table.generate_cc_spells_table_from_spellbook()
-                    IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-                    IR_Table.CCActionBarTable = i
-                    IR_Table.CCActionBarSlot = c
-                    IR_Table.InitialCCLoadDone = true
-                    for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                        table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                    end
-                    for _, value in ipairs(IR_Table.ClassCCSpell) do
-                        table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                    end
-                end
+                IR_Table.TablesAreSame = false
             end
         end
 
-        if IR_Table.InterruptActionBarTable == 0 and not IR_Table.AlreadyWarned then
-            local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
-            printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
-            IR_Table.AlreadyWarned = true
+        if IR_Table.TablesAreSame == false then
+            IR_Table.InterruptActionBarTable = j
+            IR_Table.InterruptActionBarSlot = k
+
+            -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
+            if InterruptReminder_IsInit == true then
+                --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
+                      execute once the game is in a playable state]]
+                IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+                IR_Table.generate_cc_spells_table_from_spellbook()
+                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+                IR_Table.CCActionBarTable = i
+                IR_Table.CCActionBarSlot = c
+                IR_Table.InitialCCLoadDone = true
+                for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                end
+                for _, value in ipairs(IR_Table.ClassCCSpell) do
+                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+                end
+            end
+
+            if IR_Table.InterruptActionBarTable == 0 and not IR_Table.AlreadyWarned then
+                local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
+                printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
+                IR_Table.AlreadyWarned = true
+            end
         end
     end
 end
@@ -625,9 +649,9 @@ end
 function IR_Table.handle_zone_changed()
     IR_Table.is_dungeon_instance()
     IR_Table.DungeonBoss_Names = {}
-    if IR_Table.current_dungeon_map_id ~= false then
+    if IR_Table.CurrentDungeonMapId ~= false then
         local name
-        local dungeonBossIDs = C_EncounterJournal.GetEncountersOnMap(IR_Table.current_dungeon_map_id) or {}
+        local dungeonBossIDs = C_EncounterJournal.GetEncountersOnMap(IR_Table.CurrentDungeonMapId) or {}
         for _, encounter in pairs(dungeonBossIDs) do
             for i = 1, 9 do
                 name = select(2, EJ_GetCreatureInfo(i, encounter.encounterID))
