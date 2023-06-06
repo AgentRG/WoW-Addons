@@ -261,8 +261,10 @@ end
 ---Returns the dungeon ID or false (not a dungeon) depending on the player's current location in the world.
 function IR_Table.is_dungeon_instance()
     local currentMapId = C_Map.GetBestMapForUnit("player")
+
     if currentMapId then
         local mapInfo = C_Map.GetMapInfo(currentMapId)
+
         if mapInfo and mapInfo.mapType == Enum.UIMapType.Dungeon then
             IR_Table.CurrentDungeonMapId = currentMapId
         else
@@ -338,13 +340,16 @@ end
 function IR_Table.find_all_interrupt_spell(spells)
     local buttonTables = {}
     local buttonIds = {}
+
     for _, spell in ipairs(spells) do
         for _, barName in ipairs(IR_Table.ActionBars) do
             for i = 1, 12 do
                 local button = _G[barName .. 'Button' .. i]
                 local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
+
                 if HasAction(slot) then
                     local actionType, id, _, actionName = GetActionInfo(slot)
+
                     if actionType == 'spell' then
                         actionName = GetSpellInfo(id)
                     end
@@ -380,8 +385,10 @@ function IR_Table.get_spell_cooldowns(spells_table)
             for i = 1, 12 do
                 local button = _G[barName .. 'Button' .. i]
                 local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
+
                 if HasAction(slot) then
                     local actionType, id, _, actionName = GetActionInfo(slot)
+
                     if actionType == 'spell' then
                         actionName = GetSpellInfo(id)
                     end
@@ -398,6 +405,7 @@ function IR_Table.get_spell_cooldowns(spells_table)
     for i = 1, #spells_table do
         local start, duration = GetSpellCooldown(spells_table[i])
         local spellLocation = find_interrupt_spell(spells_table[i])
+
         if start then
             if start == 0 then
                 table.insert(readyToCast, {['cooldown']=start, ['location']=spellLocation})
@@ -440,6 +448,7 @@ end
 --- the saved variables for targetCanBeAttacked, notInterruptible, startTime, endTime or false if no spell is being cast.
 function IR_Table.is_target_casting_spell(targetCanBeAttacked)
     local name, _, _, startTime, endTime, _, _, notInterruptible, _ = UnitCastingInfo('target')
+
     if name == nil then
         name, _, _, startTime, endTime, _, notInterruptible, _ = UnitChannelInfo('target')
     end
@@ -476,6 +485,7 @@ end
 --- can still be interrupted, in which case it will highlight the ability at its location.
 function IR_Table.handle_current_target_spell_casting()
     local isSpellNotInterruptible = select(2, IR_Table.is_target_casting_spell(IR_Table.CurrentTargetCanBeAttacked))
+
     if isSpellNotInterruptible == false then
         if IR_Table.TargetCanBeStunned then
             local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned)
