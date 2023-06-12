@@ -141,9 +141,9 @@ SlashCmdList.INTERRUPT_REMINDER_INIT = function()
             table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
         end
         InterruptReminder_IsInit = true
-        printInfo("Interrupt Reminder Crowd Control initialize has initialized. To view saved Crowd Control spells, use /irprint.")
+        printInfo("Interrupt Reminder Crowd Control has initialized. To view saved Crowd Control spells, use /irprint. To opt-out, use /irdel.")
     else
-        printWarning("Interrupt Reminder Crowd Control initialize was already initialized and is tracking spell upgrades. To view saved Crowd Control and Interrupt spells, use /irprint.")
+        printWarning("Interrupt Reminder Crowd Control was already initialized. To view saved Crowd Control and Interrupt spells, use /irprint. To opt-out, use /irdel")
     end
 end
 
