@@ -47,6 +47,8 @@ IR_Table.ExtraneousCCSpells = {
     'Crackling Jade Lightning' --[[Has a low chance to cause CC]], 'Restoral', 'Storm, Earth, and Fire'
 }
 
+IR_Table.ZonesThatAreDungeons = {1010 --[[The MOTHERLODE!!]]}
+
 --Dedicated interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary effect)
 IR_Table.InterruptSpellsSwitch = {
     ['Death Knight'] = {'Mind Freeze', 'Asphyxiate', 'Strangulate', 'Death Grip'},
@@ -260,7 +262,7 @@ function IR_Table.is_dungeon_instance()
     if currentMapId then
         local mapInfo = C_Map.GetMapInfo(currentMapId)
 
-        if mapInfo and mapInfo.mapType == Enum.UIMapType.Dungeon then
+        if mapInfo and (mapInfo.mapType == Enum.UIMapType.Dungeon or tContains(IR_Table.ZonesThatAreDungeons, currentMapId)) then
             IR_Table.CurrentDungeonMapId = currentMapId
         else
             IR_Table.CurrentDungeonMapId = false
