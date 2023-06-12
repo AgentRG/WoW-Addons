@@ -127,8 +127,19 @@ end
 
 ---Slash command that will initialize tracking of Crowd Control spells
 SlashCmdList.INTERRUPT_REMINDER_INIT = function()
-    if not InterruptReminder_IsInit then
+    if InterruptReminder_IsInit == false then
+        IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
         IR_Table.generate_cc_spells_table_from_spellbook()
+        IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+        local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
+        IR_Table.CCActionBarTable = i
+        IR_Table.CCActionBarSlot = c
+        for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+            table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+        end
+        for _, value in ipairs(IR_Table.ClassCCSpell) do
+            table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+        end
         InterruptReminder_IsInit = true
         printInfo("Interrupt Reminder Crowd Control initialize has initialized. To view saved Crowd Control spells, use /irprint.")
     else
@@ -168,6 +179,7 @@ end
 ---Slash command to disable Crowd Control spell tracking. Add-on will revert to interrupt only functionality.
 SlashCmdList.INTERRUPT_REMINDER_DEL = function()
     IR_Table.CCSpellsSwitch = {}
+    IR_Table.TargetCanBeStunned = false
     InterruptReminder_IsInit = false
     printInfo("Saved Crowd Control spells have been cleared from addon.")
 end
@@ -223,23 +235,6 @@ function IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(slot)
             for _, value in ipairs(IR_Table.InterruptActionBarSlot) do
                 table.insert(action_bar_slots, value)
             end
-
-            if next(IR_Table.CCActionBarSlot) == nil and IR_Table.InitialLoadDone == true then
-                IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-                IR_Table.generate_cc_spells_table_from_spellbook()
-                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-                local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-                IR_Table.CCActionBarTable = i
-                IR_Table.CCActionBarSlot = c
-                IR_Table.InitialCCLoadDone = true
-                for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
-                for _, value in ipairs(IR_Table.ClassCCSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
-            end
-
             for _, value in ipairs(IR_Table.CCActionBarSlot) do
                 table.insert(action_bar_slots, value)
             end
@@ -412,13 +407,12 @@ function IR_Table.get_spell_cooldowns(spells_table)
             end
             if start ~= 0 then
                 -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
-                local calculateTimeRemaining = (start + duration - GetTime()) + 0.01
+                local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
                 -- Safety check to ensure we don't save a negative number by mistake
-                if calculateTimeRemaining > 0 then
-                    local endTime = select(4, IR_Table.is_target_casting_spell(IR_Table.CurrentTargetCanBeAttacked))
+                if calculatedTimeRemaining > 0 then
                     -- Check that the spell will be ready before the spellcast from the target ends
-                    if endTime ~= nil and endTime < ((start + duration) * 1000) then
-                        table.insert(stillOnCooldown, {['cooldown']=calculateTimeRemaining, ['location']=spellLocation})
+                    if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
+                        table.insert(stillOnCooldown, { ['cooldown']= calculatedTimeRemaining, ['location']=spellLocation})
                     end
                 end
             end
@@ -428,25 +422,8 @@ function IR_Table.get_spell_cooldowns(spells_table)
 end
 
 
----Check if two tables are equal before continuing with the function which this used in.
-function IR_Table.are_two_tables_equal(t1, t2)
-    if #t1 ~= #t2 then return false end
-
-    for k, v in pairs(t1) do
-        if v ~= t2[k] then
-            return false
-        end
-    end
-    return true
-end
-
-
----Checks if the target is casting or channeling a spell.
----Parameters:
---- targetCanBeAttacked (boolean): Indicates whether the target can be attacked.
----Returns:
---- the saved variables for targetCanBeAttacked, notInterruptible, startTime, endTime or false if no spell is being cast.
-function IR_Table.is_target_casting_spell(targetCanBeAttacked)
+---Checks if the target is casting or channeling a spell and set IR_Table.* values.
+function IR_Table.is_target_casting_interruptible_spell()
     local name, _, _, startTime, endTime, _, _, notInterruptible, _ = UnitCastingInfo('target')
 
     if name == nil then
@@ -454,18 +431,25 @@ function IR_Table.is_target_casting_spell(targetCanBeAttacked)
     end
     -- Safety measure to make sure a nil is not returned somehow
     if name ~= nil then
-        return targetCanBeAttacked, notInterruptible, startTime, endTime
+        if notInterruptible == false then
+            IR_Table.EndTime = endTime
+            IR_Table.StartTime = startTime
+            IR_Table.IsInterruptible = true
+        else
+            IR_Table.EndTime = endTime
+            IR_Table.StartTime = startTime
+            IR_Table.IsInterruptible = false
+        end
     else
-        return false
+        IR_Table.EndTime = nil
+        IR_Table.StartTime = nil
+        IR_Table.IsInterruptible = false
     end
 end
 
 
 ---Handles the unhighlight of spells.
 function IR_Table.handle_target_stopped_casting()
-    if IR_Table.PlayerInCombat == true then
-        IR_Table.handle_player_changing_his_action_bar()
-    end
     for _, location in ipairs(IR_Table.InterruptActionBarTable) do
         LibButtonGlow.HideOverlayGlow(location)
     end
@@ -474,7 +458,6 @@ function IR_Table.handle_target_stopped_casting()
             LibButtonGlow.HideOverlayGlow(location)
         end
     end
-    IR_Table.IsHighlighted = false
 end
 
 
@@ -484,51 +467,53 @@ end
 ---In case a spell is in cooldown, use C_Timer.After to check whether by the time it is off cooldown, that target
 --- can still be interrupted, in which case it will highlight the ability at its location.
 function IR_Table.handle_current_target_spell_casting()
-    local isSpellNotInterruptible = select(2, IR_Table.is_target_casting_spell(IR_Table.CurrentTargetCanBeAttacked))
 
-    if isSpellNotInterruptible == false then
-        if IR_Table.TargetCanBeStunned then
+    IR_Table.is_target_casting_interruptible_spell()
+
+    if IR_Table.IsInterruptible == true then
+        if IR_Table.TargetCanBeStunned then -- Can be true only when Crowd Control spell tracking is enabled
             local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned)
             for i = 1, #readyToCast do
-                if IR_Table.IsHighlighted ~= true then
-                    LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
-                end
+                LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
             end
             local stillOnCooldown = select(2, IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned))
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
-                    if select(2, IR_Table.is_target_casting_spell(IR_Table.CurrentTargetCanBeAttacked)) == false then
-                        if IR_Table.IsHighlighted ~= true then
-                            LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
-                        end
+                    IR_Table.is_target_casting_interruptible_spell()
+                    if IR_Table.IsInterruptible == true then
+                        LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
                     end
                 end)
             end
         else
             local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.ClassInterruptSpell)
             for i = 1, #readyToCast do
-                if IR_Table.IsHighlighted ~= true then
-                    LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
-                end
+                LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
             end
             local stillOnCooldown = select(2, IR_Table.get_spell_cooldowns(IR_Table.ClassInterruptSpell))
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
-                    if select(2, IR_Table.is_target_casting_spell(IR_Table.CurrentTargetCanBeAttacked)) == false then
-                        if IR_Table.IsHighlighted ~= true then
-                            LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
-                        end
+                    IR_Table.is_target_casting_interruptible_spell()
+                    if IR_Table.IsInterruptible == true then
+                        LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
                     end
                 end)
             end
         end
-        IR_Table.IsHighlighted = true
     end
 end
 
 
 ---Handles the logic for when the enter players the world (initial login or /reload).
 function IR_Table.handle_player_entering_world()
+
+    -- Initial values for interruptReminder_Table
+    IR_Table.AlreadyWarned = false
+    IR_Table.EndTime = nil
+    IR_Table.StartTime = nil
+    IR_Table.IsInterruptible = false
+    IR_Table.TargetCanBeStunned = false
+    IR_Table.CurrentTargetCanBeAttacked = false
 
     -- This should execute only once in addon's lifetime.
     if InterruptReminder_FirstLaunch == nil then
@@ -561,7 +546,6 @@ function IR_Table.handle_player_entering_world()
                 local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
                 IR_Table.CCActionBarTable = i
                 IR_Table.CCActionBarSlot = c
-                IR_Table.InitialCCLoadDone = true
                 for _, value in ipairs(IR_Table.ClassInterruptSpell) do
                     table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
                 end
@@ -571,17 +555,8 @@ function IR_Table.handle_player_entering_world()
             end)
         end
 
-        -- Initial values for interruptReminder_Table
-        IR_Table.IsHighlighted = false
-        IR_Table.AlreadyWarned = false
-        IR_Table.TargetCanBeStunned = false
-        IR_Table.CurrentTargetCanBeAttacked = false
-        IR_Table.PlayerInCombat = false
-        IR_Table.TablesAreSame = false
-
-
         -- Check if the action bars do not contain any interrupt spell, in which case a warning will be thrown
-        if #IR_Table.InterruptActionBarTable == 0 then
+        if next(IR_Table.InterruptActionBarTable) == nil then
             local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
             printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
             if playerClass == 'Warlock' then
@@ -592,10 +567,10 @@ function IR_Table.handle_player_entering_world()
 
         -- ACTIONBAR_SLOT_CHANGED is triggered during login, so calling the handler function here to avoid nil scenarios
         C_Timer.After(2, function()
-            IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell()
             IR_Table.InitialLoadDone = true
         end)
     end
+
     if InterruptReminder_IsInit then
         IR_Table.handle_zone_changed()
     end
@@ -607,47 +582,38 @@ end
 function IR_Table.handle_player_changing_his_action_bar()
     if IR_Table.InitialLoadDone then
         local i, c
-
         -- Find the location of those spells on the action bars
+        if IR_Table.ClassInterruptSpell == nil then IR_Table.ClassInterruptSpell = IR_Table.InterruptSpellsSwitch[playerClass] end
         local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
-        if IR_Table.are_two_tables_equal(j, IR_Table.InterruptActionBarTable) == false then
-            IR_Table.TablesAreSame = true
-        else
+        if InterruptReminder_IsInit then
+            if IR_Table.ClassCCSpell == nil then
+                IR_Table.generate_cc_spells_table_from_spellbook()
+                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+            end
             i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-            if IR_Table.are_two_tables_equal(i, IR_Table.CCActionBarTable) == false then
-                IR_Table.TablesAreSame = true
-            else
-                IR_Table.TablesAreSame = false
+        end
+        IR_Table.InterruptActionBarTable = j
+        IR_Table.InterruptActionBarSlot = k
+
+        -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
+        if InterruptReminder_IsInit == true then
+            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+            IR_Table.generate_cc_spells_table_from_spellbook()
+            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+            IR_Table.CCActionBarTable = i
+            IR_Table.CCActionBarSlot = c
+            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+            end
+            for _, value in ipairs(IR_Table.ClassCCSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
             end
         end
 
-        if IR_Table.TablesAreSame == false then
-            IR_Table.InterruptActionBarTable = j
-            IR_Table.InterruptActionBarSlot = k
-
-            -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
-            if InterruptReminder_IsInit == true then
-                --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
-                      execute once the game is in a playable state]]
-                IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-                IR_Table.generate_cc_spells_table_from_spellbook()
-                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-                IR_Table.CCActionBarTable = i
-                IR_Table.CCActionBarSlot = c
-                IR_Table.InitialCCLoadDone = true
-                for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
-                for _, value in ipairs(IR_Table.ClassCCSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
-            end
-
-            if IR_Table.InterruptActionBarTable == 0 and not IR_Table.AlreadyWarned then
-                local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
-                printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
-                IR_Table.AlreadyWarned = true
-            end
+        if next(IR_Table.InterruptActionBarTable) == nil and not IR_Table.AlreadyWarned then
+            local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
+            printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
+            IR_Table.AlreadyWarned = true
         end
     end
 end
@@ -699,19 +665,13 @@ function IR_Table.handle_player_switching_targets()
 end
 
 
-function IR_Table.handle_player_entering_combat() IR_Table.PlayerInCombat = true end
-function IR_Table.handle_player_leaving_combat() IR_Table.PlayerInCombat = false end
-
-
 function f:OnEvent(event, ...)
     if event == 'PLAYER_ENTERING_WORLD' then IR_Table.handle_player_entering_world() end
     if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then IR_Table.handle_current_target_spell_casting() end
     if (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then IR_Table.handle_target_stopped_casting() end
     if event == 'PLAYER_TARGET_CHANGED' then IR_Table.handle_player_switching_targets() end
-    if event == 'ACTIONBAR_SLOT_CHANGED' and IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(...) and IR_Table.PlayerInCombat == false then IR_Table.handle_player_changing_his_action_bar() end
+    if event == 'ACTIONBAR_SLOT_CHANGED' then IR_Table.handle_player_changing_his_action_bar() end
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') and InterruptReminder_IsInit then IR_Table.handle_zone_changed() end
-    if event == 'PLAYER_REGEN_DISABLED' then IR_Table.handle_player_entering_combat() end
-    if event == 'PLAYER_REGEN_ENABLED' then IR_Table.handle_player_leaving_combat() end
 end
 
 
@@ -726,6 +686,4 @@ f:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
-f:RegisterEvent('PLAYER_REGEN_DISABLED')
-f:RegisterEvent('PLAYER_REGEN_ENABLED')
 f:SetScript('OnEvent', f.OnEvent)
