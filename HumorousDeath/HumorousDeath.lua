@@ -1,6 +1,7 @@
 SLASH_HUMOROUS_DEATH_DEBUG1 = "/hddebug"
 SLASH_HUMOROUS_DEATH_ROTATE1 = "/hdsetrotate"
 SLASH_HUMOROUS_DEATH_RANDOM1 = "/hdsetrandom"
+SLASH_HUMOROUS_DEATH_HELP1 = "/hdhelp"
 
 -- Table from which the add-on retrieves and stores all runtime data.
 local HD_Table = {}
@@ -26,6 +27,11 @@ local StopSound = StopSound
 
 local function printInfo(text) print("|cff00ffffInfo (HumorousDeath): |cffffffff"..text) end
 
+SlashCmdList.HUMOROUS_DEATH_HELP = function()
+    print("/hdsetrotate - Incrementally iterate through the sound files.")
+    print("/hdsetrandom - Play the sound files at a random order.")
+    print("/hddebug - Developer stuff. Also prints what next song will play.")
+end
 
 -- Slash command to print the contents of HD_Table excluding functions and static content. Used for debugging. Also prints the current HumorousDeath_IterateInt.
 SlashCmdList.HUMOROUS_DEATH_DEBUG = function()
@@ -98,6 +104,10 @@ end
 
 -- Handles the logic for when the enter players the world (initial login or /reload).
 function HD_Table.handle_player_entering_world()
+    if HumorousDeath_FirstTimeDone == nil then
+        HumorousDeath_FirstTimeDone = true
+        printInfo('First time? Type /hdhelp for more information.')
+    end
     if HumorousDeath_IterateInt == nil then
         HumorousDeath_IterateInt = 1
         HumorousDeath_Setting = 0
