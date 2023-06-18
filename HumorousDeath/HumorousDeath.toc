@@ -1,0 +1,7 @@
+## Interface: 100100
+## Version: 1.0.0
+## Title: Humorous Death
+## Author: AgentRG
+## SavedVariablesPerCharacter: HumorousDeath_IterateInt, HumorousDeath_Setting, HumorousDeath_FirstTimeDone
+
+HumorousDeath.lua
