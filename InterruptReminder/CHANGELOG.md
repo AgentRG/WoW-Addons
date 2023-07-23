@@ -1,3 +1,9 @@
+## v1.3.1
+Bug Fixes:
+
+    Fixed a bug where a non-attackable target would still trigger the interrupt reminder to highlight the buttons
+    Fixed a bug where the Evoker's Beath of Eons would highlight when an interruptible ability was being cast 
+
 ## v1.3.0
 New Addition:
 
