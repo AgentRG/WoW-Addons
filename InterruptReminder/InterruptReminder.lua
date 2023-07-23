@@ -16,7 +16,7 @@ IR_Table.CrownControlTypes = {'knock', 'control', 'confuse', 'fear', 'flee', 'st
 --Spells that will get picked up by generate_cc_spells_table_from_spellbook() because they contain a keyword from CrownControlTypes that we do not want to be added to the list
 IR_Table.ExtraneousCCSpells = {
     --Evoker
-    'Deep Breath', 'Dream Flight', 'Emerald Communion',
+    'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons',
     --Warlock
     'Axe Toss' --[[Interrupt spell]], 'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard',
     --Humans
@@ -472,7 +472,7 @@ function IR_Table.handle_current_target_spell_casting()
 
     IR_Table.is_target_casting_interruptible_spell()
 
-    if IR_Table.IsInterruptible == true then
+    if IR_Table.IsInterruptible == true and IR_Table.CurrentTargetCanBeAttacked == true then
         if IR_Table.TargetCanBeStunned then -- Can be true only when Crowd Control spell tracking is enabled
             local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned)
             for i = 1, #readyToCast do
