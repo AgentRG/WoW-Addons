@@ -17,13 +17,6 @@ local two_decimal_format = '%.2f'
 local skullIcon = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
 local updateDisplayTicker
 local updateTableTicker
-local C_Timer, C_EncounterJournal, C_Map, EJ_GetCreatureInfo, GetNumGroupMembers, IsInRaid, IsInGroup,
-LE_PARTY_CATEGORY_INSTANCE, UnitTokenFromGUID, UnitAffectingCombat, UnitDetailedThreatSituation, C_CVar, UnitGUID,
-UnitCanAttack, UnitExists, UnitIsUnit, UnitName, CombatLogGetCurrentEventInfo, tContains
-=
-C_Timer, C_EncounterJournal, C_Map, EJ_GetCreatureInfo, GetNumGroupMembers, IsInRaid, IsInGroup,
-LE_PARTY_CATEGORY_INSTANCE, UnitTokenFromGUID, UnitAffectingCombat, UnitDetailedThreatSituation, C_CVar, UnitGUID,
-UnitCanAttack, UnitExists, UnitIsUnit, UnitName, CombatLogGetCurrentEventInfo, tContains
 
 local f = CreateFrame('Frame', 'ThreatTrack', UIParent, 'BackdropTemplate')
 
@@ -345,18 +338,25 @@ local function get_enemy_nameplates()
         local unitToken = UnitTokenFromGUID(unitGuid)
         local unitName = unitData[2]
 
-        if unitToken ~= nil then
-            if UnitAffectingCombat(unitToken) then
-                enemyNameplates.unitGuid = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = true, combat = true }
+        if enemyNameplates[unitGuid] ~= nil then
+            if unitToken ~= nil then
+                if UnitAffectingCombat(unitToken) then
+                    enemyNameplates[unitGuid] = {guid = oldEnemyNameplates[unitGuid].guid, nameplate = unitToken, name = oldEnemyNameplates[unitGuid].name, visible = true, combat = true}
+                else
+                    enemyNameplates[unitGuid] = {guid = oldEnemyNameplates[unitGuid].guid, nameplate = unitToken, name = oldEnemyNameplates[unitGuid].name, visible = true, combat = false}
+                end
             else
-                enemyNameplates.unitGuid = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = true, combat = false }
+                enemyNameplates[unitGuid] = {guid = oldEnemyNameplates[unitGuid].guid, nameplate = unitToken, name = oldEnemyNameplates[unitGuid].name, visible = false, combat = oldEnemyNameplates[unitGuid].combat}
             end
         else
-            if enemyNameplates.unitGuid ~= nil then
-                local combatStatus = enemyNameplates.unitGuid.combat
-                enemyNameplates.unitGuid = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = false, combat = combatStatus }
+            if unitToken ~= nil then
+                if UnitAffectingCombat(unitToken) then
+                    enemyNameplates[unitGuid] = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = true, combat = true }
+                else
+                    enemyNameplates[unitGuid] = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = true, combat = false }
+                end
             else
-                enemyNameplates.unitGuid = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = false, combat = unknown }
+                enemyNameplates[unitGuid] = { guid = unitGuid, nameplate = unitToken, name = unitName, visible = false, combat = unknown }
             end
         end
     end
@@ -410,7 +410,7 @@ local function generate_already_tanking_and_not_tanking_tables()
     local localNotTanking = {}
     local nameplates = enemyNameplates
     for _, unitData in pairs(nameplates) do
-        if unitData.visible == true then
+        if unitData.visible == true and unitData.combat == true then
             local isTanking, _, _, _, threatValue = UnitDetailedThreatSituation(player, unitData.nameplate)
             if isTanking == true then
                 alreadyTanking[#alreadyTanking + 1] = { guid = unitData.guid, name = unitData.name, percent = 100.00, tanking = true, real_number = true, visible = true }
