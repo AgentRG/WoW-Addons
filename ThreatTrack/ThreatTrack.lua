@@ -17,6 +17,13 @@ local two_decimal_format = '%.2f'
 local skullIcon = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
 local updateDisplayTicker
 local updateTableTicker
+local C_Timer, C_EncounterJournal, C_Map, EJ_GetCreatureInfo, GetNumGroupMembers, IsInRaid, IsInGroup,
+LE_PARTY_CATEGORY_INSTANCE, UnitTokenFromGUID, UnitAffectingCombat, UnitDetailedThreatSituation, C_CVar, UnitGUID,
+UnitCanAttack, UnitExists, UnitIsUnit, UnitName, CombatLogGetCurrentEventInfo, tContains
+=
+C_Timer, C_EncounterJournal, C_Map, EJ_GetCreatureInfo, GetNumGroupMembers, IsInRaid, IsInGroup,
+LE_PARTY_CATEGORY_INSTANCE, UnitTokenFromGUID, UnitAffectingCombat, UnitDetailedThreatSituation, C_CVar, UnitGUID,
+UnitCanAttack, UnitExists, UnitIsUnit, UnitName, CombatLogGetCurrentEventInfo, tContains
 
 local f = CreateFrame('Frame', 'ThreatTrack', UIParent, 'BackdropTemplate')
 
