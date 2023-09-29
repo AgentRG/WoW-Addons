@@ -1,0 +1,7 @@
+## Interface: 100107
+## Version: 1.0.0
+## Title: Threat Track
+## Author: AgentRG
+## SavedVariablesPerCharacter: ThreatTrack_currentBossList, ThreatTrack_seconds
+
+ThreatTrack.lua
