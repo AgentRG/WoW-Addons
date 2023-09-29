@@ -15,8 +15,32 @@ local na = 'N/A'
 local unknown = 'unknown'
 local two_decimal_format = '%.2f'
 local skullIcon = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
-local updateDisplayTicker
 local updateTableTicker
+SLASH_THREAT_TRACK_HELP1 = "/tthelp"
+SLASH_THREAT_TRACK_SET1 = "/ttset"
+
+SlashCmdList.THREAT_TRACK_HELP = function()
+    print("/ttset {seconds}: Set how often the display should update in seconds (/ttset 2).")
+end
+
+SlashCmdList.THREAT_TRACK_SET = function(arg1)
+    if (arg1 == "" or arg1:find("%D")) then
+        print("|cffffff00Warning (ThreatTrack): |cffffffff Seconds passed are invalid. Expected an integer but received: "..arg1)
+    else
+        local number = tonumber(arg1)
+        if number >= 0 then
+            number = tonumber(arg1)
+            ThreatTrack_seconds = number
+            if number == 0 then
+                print("|cff00ffffInfo (ThreatTrack): |cffffffff Updated the seconds to update the percentage table to be real time (0 seconds).")
+            else
+                print("|cff00ffffInfo (ThreatTrack): |cffffffff Updated the seconds to update the percentage table to every "..number.." seconds.")
+            end
+        else
+            print("|cffffff00Warning (ThreatTrack): |cffffffff Something went wrong! Please let the creator know what you typed in for seconds.")
+        end
+    end
+end
 
 local f = CreateFrame('Frame', 'ThreatTrack', UIParent, 'BackdropTemplate')
 
@@ -258,19 +282,6 @@ local function update_display()
     end
 end
 
-local function stop_ui_ticker()
-    if updateDisplayTicker then
-        updateDisplayTicker:Cancel()
-        updateDisplayTicker = nil
-    end
-end
-
-local function start_ui_ticker()
-    if not updateDisplayTicker then
-        updateDisplayTicker = C_Timer.NewTicker(1.5, update_display)
-    end
-end
-
 ---[[
 ---BACKEND STUFF STARTS HERE
 ---]]
@@ -403,6 +414,8 @@ local function find_percent_based_on_current_tanker_of_nameplate()
 end
 
 local function generate_already_tanking_and_not_tanking_tables()
+    get_enemy_nameplates()
+    get_group_nameplates()
     percentage = {}
     notTanking = {}
     local unseenEnemies = {}
@@ -429,13 +442,12 @@ local function generate_already_tanking_and_not_tanking_tables()
     merge_two_tables(percentage, alreadyTanking)
     merge_two_tables(percentage, unseenEnemies)
     oldPercentage = percentage
+    sort_percentage_table()
+    update_display()
 end
 
 local function track_threat()
-    get_enemy_nameplates()
-    get_group_nameplates()
     generate_already_tanking_and_not_tanking_tables()
-    sort_percentage_table()
 end
 
 local function stop_backend_ticker()
@@ -447,7 +459,7 @@ end
 
 local function start_backend_ticker()
     if not updateTableTicker then
-        updateTableTicker = C_Timer.NewTicker(1, track_threat)
+        updateTableTicker = C_Timer.NewTicker(ThreatTrack_seconds, track_threat)
     end
 end
 
@@ -465,11 +477,13 @@ function TT_Table.handle_player_entering_world()
     if ThreatTrack_currentBossList == nil then
         ThreatTrack_currentBossList = {}
     end
+    if ThreatTrack_seconds == nil then
+        ThreatTrack_seconds = 1
+    end
 end
 
 function TT_Table.handle_player_entering_combat()
     start_backend_ticker()
-    start_ui_ticker()
 end
 
 function TT_Table.handle_player_leaving_combat()
@@ -477,7 +491,6 @@ function TT_Table.handle_player_leaving_combat()
     friendlyNameplates = {}
     percentage = {}
     notTanking = {}
-    stop_ui_ticker()
     stop_backend_ticker()
     clear_display()
 end
