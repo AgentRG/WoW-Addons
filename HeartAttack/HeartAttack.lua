@@ -3,10 +3,20 @@ local HA_Table = {}
 local f = CreateFrame('Frame', 'HeartAttack')
 local start_time
 local stopped_walking_ticker
+local heart_attack_ticker
 local time = time
 local IsMounted = IsMounted
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
+
+--Main function that determines whether a heart attack will occur.
+local function do_heart_attack(overwrite)
+    overwrite = overwrite or false
+    local test = 'wow'
+    if test == 'owo' then
+        HeartAttack_GameOver = true
+    end
+end
 
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
 local function subtract_max_val(value)
@@ -17,7 +27,12 @@ local function subtract_max_val(value)
         max_val_copy = max_val_copy - value
     end
     HeartAttack_MaxVal = max_val_copy
+    --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
+    if HeartAttack_MaxVal <= 0 then
+        do_heart_attack(true)
+    end
 end
+
 
 --[[For every 5 seconds walked, decrease HeartAttack_MaxVal by that much. Reset all values to nil to save memory. If for
  some reason, start_time was nil, just subtract HeartAttack_MaxVal by 1]]
@@ -40,8 +55,13 @@ end
 function HA_Table.handle_player_entering_world()
     if HeartAttack_FirstTimeDone == nil then
         HeartAttack_FirstTimeDone = true
+        HeartAttack_GameOver = false
         HeartAttack_MaxVal = 9223372036854775807
         printInfo('First time? Type /hahelp for more information.')
+    end
+    --Every hour, trigger do_heart_attack to see if the player will experience a heart attack
+    if not heart_attack_ticker then
+        heart_attack_ticker = C_Timer.NewTicker(3600, do_heart_attack)
     end
 end
 
@@ -100,12 +120,14 @@ end
 
 
 function f:OnEvent(event, arg1, arg2, arg3)
-    if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
-    if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving() end
-    if event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving() end
-    if event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg3) end
-    if --[[event == 'PLAYER_ALIVE' or]] event == 'PLAYER_UNGHOST' then HA_Table.handle_player_alive() end
-    if event == 'PLAYER_DEAD' then HA_Table.handle_player_dead() end
+    if HeartAttack_GameOver == false then
+        if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
+        if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving() end
+        if event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving() end
+        if event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg3) end
+        if --[[event == 'PLAYER_ALIVE' or]] event == 'PLAYER_UNGHOST' then HA_Table.handle_player_alive() end
+        if event == 'PLAYER_DEAD' then HA_Table.handle_player_dead() end
+    end
 end
 
 
