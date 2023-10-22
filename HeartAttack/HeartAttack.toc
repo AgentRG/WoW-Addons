@@ -1,0 +1,7 @@
+## Interface: 100107
+## Version: 1.0.0
+## Title: Heart Attack
+## Author: AgentRG
+## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_MaxVal, HeartAttack_DeadTime
+
+HeartAttack.lua
