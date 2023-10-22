@@ -9,11 +9,13 @@ local IsMounted = IsMounted
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
 
---Main function that determines whether a heart attack will occur.
+--Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
 local function do_heart_attack(overwrite)
     overwrite = overwrite or false
     local test = 'wow'
     if test == 'owo' then
+        heart_attack_ticker:Cancel()
+        heart_attack_ticker = nil
         HeartAttack_GameOver = true
     end
 end
