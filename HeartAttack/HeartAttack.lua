@@ -6,8 +6,37 @@ local stopped_walking_ticker
 local heart_attack_ticker
 local time = time
 local IsMounted = IsMounted
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
+SLASH_HEART_ATTACK_HELP1 = "/hahelp"
+SLASH_HEART_ATTACK_DEBUG1 = "/hadebug"
+SLASH_HEART_ATTACK_RESET1 = "/hareset"
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
+local function printWarning(text) print("|cffffff00Warning (HeartAttack): |cffffffff"..text) end
+local function printDebug(text) print("|cff00ff00Debug (HeartAttack): |cffffffff"..text)  end
+
+SlashCmdList.HEART_ATTACK_RESET = function()
+    HeartAttack_FirstTimeDone = true
+    HeartAttack_Debug = false
+    HeartAttack_GameOver = false
+    HeartAttack_MaxVal = 9223372036854775807
+    HeartAttack_StartTime = time()
+    printInfo("Add-on has been completely reset to initial parameters with new start time.")
+end
+
+SlashCmdList.HEART_ATTACK_DEBUG = function(arg1)
+    if (arg1 == "" or arg1 ~= "true" and arg1 ~= "false") then
+        printWarning("Expected true or false but received: "..arg1)
+    else
+        if arg1 == "true" then
+            HeartAttack_Debug = true
+            printInfo("Debug has been enabled.")
+        else
+            HeartAttack_Debug = false
+            printInfo("Debug has been disabled.")
+        end
+    end
+end
 
 --Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
 local function do_heart_attack(overwrite)
@@ -22,11 +51,11 @@ end
 
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
 local function subtract_max_val(value)
+    value = value or 1
     local max_val_copy = HeartAttack_MaxVal
-    if value == nil then
-        max_val_copy = max_val_copy - 1
-    else
-        max_val_copy = max_val_copy - value
+    max_val_copy = max_val_copy - value
+    if HeartAttack_Debug == true then
+        printDebug("Subtracted "..value.." from "..max_val_copy..".")
     end
     HeartAttack_MaxVal = max_val_copy
     --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
@@ -34,7 +63,6 @@ local function subtract_max_val(value)
         do_heart_attack(true)
     end
 end
-
 
 --[[For every 5 seconds walked, decrease HeartAttack_MaxVal by that much. Reset all values to nil to save memory. If for
  some reason, start_time was nil, just subtract HeartAttack_MaxVal by 1]]
@@ -56,21 +84,25 @@ end
 --Handles the logic for when the enter players the world (initial login or /reload).
 function HA_Table.handle_player_entering_world()
     if HeartAttack_FirstTimeDone == nil then
-        HeartAttack_FirstTimeDone = true
-        HeartAttack_GameOver = false
-        HeartAttack_MaxVal = 9223372036854775807
+        HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
+        HeartAttack_Debug = false                   -- Debug flag
+        HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
+        HeartAttack_MaxVal = 9223372036854775807    -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         printInfo('First time? Type /hahelp for more information.')
     end
     --Every hour, trigger do_heart_attack to see if the player will experience a heart attack
     if not heart_attack_ticker then
-        heart_attack_ticker = C_Timer.NewTicker(3600, do_heart_attack)
+        if HeartAttack_GameOver == false then
+            heart_attack_ticker = C_Timer.NewTicker(3600, do_heart_attack)
+        end
     end
 end
 
 --[[If the player started walking, save current epoch seconds to start_time. If stopped_walking_ticker was already
 active, cancel it and set it to nil and do not reassign start_time]]
 function HA_Table.handle_player_started_moving()
-    if not IsMounted() then
+    if not IsMounted() and not UnitIsDeadOrGhost("player") then
         if stopped_walking_ticker then
             stopped_walking_ticker:Cancel()
             stopped_walking_ticker = nil
@@ -82,7 +114,7 @@ end
 
 --If the player stopped walking, start a ticker that will execute calculate_time_walked.
 function HA_Table.handle_player_stopped_moving()
-    if not IsMounted() then
+    if not IsMounted() and not UnitIsDeadOrGhost("player") then
         if not stopped_walking_ticker then
             stopped_walking_ticker = C_Timer.NewTicker(2.5, calculate_time_walked, 1)
         end
@@ -120,10 +152,9 @@ function HA_Table.handle_player_dead()
     subtract_max_val(10)
 end
 
-
 function f:OnEvent(event, arg1, arg2, arg3)
+    if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
     if HeartAttack_GameOver == false then
-        if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving() end
         if event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving() end
         if event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg3) end
@@ -131,7 +162,6 @@ function f:OnEvent(event, arg1, arg2, arg3)
         if event == 'PLAYER_DEAD' then HA_Table.handle_player_dead() end
     end
 end
-
 
 f:RegisterEvent('PLAYER_ENTERING_WORLD')
 f:RegisterEvent('PLAYER_STARTED_MOVING')
