@@ -61,6 +61,7 @@ end
 
 --Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
 function HA_Table.do_heart_attack(overwrite)
+    HeartAttack_EventLock = true
     overwrite = overwrite or false
     local test = 'wow'
     if test == 'owo' then
@@ -71,6 +72,7 @@ function HA_Table.do_heart_attack(overwrite)
         printDebug("Heart attack did not trigger. Subtract 1.")
         subtract_max_val()
     end
+    HeartAttack_EventLock = false
 end
 
 --[[For every 5 seconds walked, decrease HeartAttack_MaxVal by that much. Reset all values to nil to save memory. If for
@@ -119,10 +121,11 @@ end
 
 --Handles the logic for when the enter players the world (initial login or /reload).
 function HA_Table.handle_player_entering_world()
-    player_guid = player_guid or UnitGUID("player") -- Save player GUID to detect player actions during combat or chat
+    player_guid = player_guid or UnitGUID("player") -- Save player GUID to detect player chatting
     if HeartAttack_FirstTimeDone == nil then
         HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
         HeartAttack_Debug = false                   -- Debug flag
+        HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
         HeartAttack_MaxVal = 9223372036854775807    -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
@@ -262,7 +265,7 @@ end
 
 function f:OnEvent(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
-    if HeartAttack_GameOver == false then
+    if HeartAttack_GameOver == false and HeartAttack_EventLock == false then
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving() end
         if event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving() end
         if event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg3) end
