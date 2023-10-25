@@ -12,6 +12,8 @@ local tContains = tContains
 local chat_types = {'CHAT_MSG_SAY', 'CHAT_MSG_CHANNEL', 'CHAT_MSG_TEXT_EMOTE', 'CHAT_MSG_EMOTE', 'CHAT_MSG_GUILD',
                     'CHAT_MSG_INSTANCE_CHAT', 'CHAT_MSG_INSTANCE_CHAT_LEADER', 'CHAT_MSG_PARTY',
                     'CHAT_MSG_PARTY_LEADER', 'CHAT_MSG_RAID', 'CHAT_MSG_WHISPER_INFORM', 'CHAT_MSG_YELL'}
+local common_events = {'PLAYER_MOUNT_DISPLAY_CHANGED', 'PLAYER_CONTROL_LOST', 'PLAYER_TARGET_CHANGED', 'GOSSIP_SHOW',
+                       'QUEST_GREETING', 'AUCTION_HOUSE_SHOW', 'BANKFRAME_OPENED', 'UNIT_SPELLCAST_SENT'}
 local IsMounted = IsMounted
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 SLASH_HEART_ATTACK_HELP1 = "/hahelp"
@@ -25,6 +27,7 @@ local function printDebug(text) if HeartAttack_Debug then print("|cff00ff00Debug
 SlashCmdList.HEART_ATTACK_RESET = function()
     HeartAttack_FirstTimeDone = true
     HeartAttack_Debug = false
+    HeartAttack_EventLock = false
     HeartAttack_GameOver = false
     HeartAttack_MaxVal = 9223372036854775807
     HeartAttack_StartTime = time()
@@ -119,6 +122,21 @@ local function calculate_time_turned()
     stopped_turning_ticker = nil
 end
 
+local function calculate_damage_taken(damage_taken)
+    if damage_taken ~= nil then
+        local division = math.floor(damage_taken / 10)
+        if division >= 1 then
+            printDebug("UNIT_COMBAT: Subtract "..division..".")
+            subtract_max_val(division)
+        else
+            printDebug("UNIT_COMBAT: Damage taken does not cross threshold. Skip subtract.")
+        end
+    else
+        printDebug("UNIT_COMBAT: amount argument was nil. Subtract 1.")
+        subtract_max_val()
+    end
+end
+
 --Handles the logic for when the enter players the world (initial login or /reload).
 function HA_Table.handle_player_entering_world()
     player_guid = player_guid or UnitGUID("player") -- Save player GUID to detect player chatting
@@ -186,13 +204,11 @@ function HA_Table.handle_player_stopped_turning()
 end
 
 --If the player got hit, subtract HeartAttack_MaxVal by 1, otherwise by 2 if the hit was critical or crushing.
-function HA_Table.handle_unit_combat(flagText)
+function HA_Table.handle_unit_combat(damage_taken, flagText)
     if flagText == nil or flagText == '' or flagText ~= 'GLANCING' then
-        printDebug("UNIT_COMBAT: Player hit without flag. Subtract 1.")
-        subtract_max_val()
+        calculate_damage_taken(damage_taken)
     else
-        printDebug("UNIT_COMBAT: Player hit with flag. Subtract 2.")
-        subtract_max_val(2)
+        calculate_damage_taken(damage_taken * 2)
     end
 end
 
@@ -227,59 +243,35 @@ function HA_Table.handle_player_level_up(level)
     subtract_max_val(level)
 end
 
---If the player mounts or dismounts, subtract 1 from HeartAttack_MaxVal.
-function HA_Table.handle_mount_display_change()
-    printDebug("PLAYER_MOUNT_DISPLAY_CHANGED: Subtract 1.")
-    subtract_max_val()
-end
-
---If the player was affected by a crown control or used a taxi, subtract 1 from HeartAttack_MaxVal.
-function HA_Table.handle_player_control_lost()
-    printDebug("PLAYER_CONTROL_LOST: Subtract 1.")
-    subtract_max_val()
-end
-
---If the player changed target, subtract 1 from HeartAttack_MaxVal.
-function HA_Table.handle_player_target_changed()
-    printDebug("PLAYER_TARGET_CHANGED: Subtract 1.")
-    subtract_max_val()
-end
-
---If the player said something in /say, subtract 1 from HeartAttack_MaxVal.
+--If the player said something in chat, subtract 1 from HeartAttack_MaxVal.
 function HA_Table.handle_msg(chat_type)
     printDebug(chat_type..": Subtract 1.")
     subtract_max_val()
 end
 
+--If the player mounts or dismounts, subtract 1 from HeartAttack_MaxVal.
+--If the player was affected by a crown control or used a taxi, subtract 1 from HeartAttack_MaxVal.
+--If the player changed target, subtract 1 from HeartAttack_MaxVal.
 --If the player talks to an NPC, subtract 1 from HeartAttack_MaxVal.
-function HA_Table.handle_npc(talk_type)
-    printDebug(talk_type..": Subtract 1.")
-    subtract_max_val()
-end
-
 --If the player casts any instant or non-instant spells, whether they have finished, subtract_max_val 1 from HeartAttack_MaxVal.
-function HA_Table.handle_unit_spellcast_sent()
-    printDebug("UNIT_SPELLCAST_SENT: Subtract 1.")
+function HA_Table.handle_common_event(event)
+    printDebug(event..": Subtract 1.")
     subtract_max_val()
 end
 
-function f:OnEvent(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
+function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
     if HeartAttack_GameOver == false and HeartAttack_EventLock == false then
-        if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving() end
-        if event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving() end
-        if event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg3) end
-        if --[[event == 'PLAYER_ALIVE' or]] event == 'PLAYER_UNGHOST' then HA_Table.handle_player_alive() end
-        if event == 'PLAYER_DEAD' then HA_Table.handle_player_dead() end
-        if event == 'PLAYER_LEVEL_UP' then HA_Table.handle_player_level_up(arg1) end
-        if event == 'PLAYER_MOUNT_DISPLAY_CHANGED' then HA_Table.handle_mount_display_change() end
-        if event == 'PLAYER_CONTROL_LOST' then HA_Table.handle_player_control_lost() end
-        if event == 'PLAYER_TARGET_CHANGED' then HA_Table.handle_player_target_changed() end
-        if event == 'PLAYER_STARTED_TURNING' then HA_Table.handle_player_started_turning() end
-        if event == 'PLAYER_STOPPED_TURNING' then HA_Table.handle_player_stopped_turning() end
-        if tContains(chat_types, event) then HA_Table.handle_msg(event) end
-        if event == 'GOSSIP_SHOW' or event == 'QUEST_GREETING' then HA_Table.handle_npc(event) end
-        if event == 'UNIT_SPELLCAST_SENT' then HA_Table.handle_unit_spellcast_sent() end
+        if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving()
+        elseif event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving()
+        elseif event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg4, arg3)
+        elseif --[[event == 'PLAYER_ALIVE' or]] event == 'PLAYER_UNGHOST' then HA_Table.handle_player_alive()
+        elseif event == 'PLAYER_DEAD' then HA_Table.handle_player_dead()
+        elseif event == 'PLAYER_LEVEL_UP' then HA_Table.handle_player_level_up(arg1)
+        elseif event == 'PLAYER_STARTED_TURNING' then HA_Table.handle_player_started_turning()
+        elseif event == 'PLAYER_STOPPED_TURNING' then HA_Table.handle_player_stopped_turning()
+        elseif tContains(common_events, event) then HA_Table.handle_common_event(event)
+        elseif tContains(chat_types, event) and arg12 == player_guid then HA_Table.handle_msg(event) end
     end
 end
 
@@ -312,4 +304,6 @@ f:RegisterEvent('CHAT_MSG_YELL')
 f:RegisterEvent('GOSSIP_SHOW')
 f:RegisterEvent('QUEST_GREETING')
 f:RegisterEvent('UNIT_SPELLCAST_SENT')
+f:RegisterEvent('BANKFRAME_OPENED')
+f:RegisterEvent('AUCTION_HOUSE_SHOW')
 f:SetScript('OnEvent', f.OnEvent)
