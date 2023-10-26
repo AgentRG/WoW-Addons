@@ -5,7 +5,11 @@ local walk_start_time
 local turn_start_time
 local stopped_walking_ticker
 local stopped_turning_ticker
+local initial_world_load = false
+local bag_lock = false
 local heart_attack_ticker
+local math = math
+local int32 = 2147483647
 local player_guid
 local time = time
 local tContains = tContains
@@ -29,8 +33,11 @@ SlashCmdList.HEART_ATTACK_RESET = function()
     HeartAttack_Debug = false
     HeartAttack_EventLock = false
     HeartAttack_GameOver = false
-    HeartAttack_MaxVal = 9223372036854775807
+    HeartAttack_MaxVal = 99999999999999
     HeartAttack_StartTime = time()
+    if not heart_attack_ticker then
+        heart_attack_ticker = C_Timer.NewTicker(3600, HA_Table.do_heart_attack)
+    end
     printInfo("Add-on has been completely reset to initial parameters with new start time.")
 end
 
@@ -57,8 +64,8 @@ local function subtract_max_val(value)
     printDebug("Subtracted "..value.." from "..max_val_copy..".")
     --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
     if HeartAttack_MaxVal <= 0 then
-        HA_Table.do_heart_attack(true)
         printDebug("HeartAttack_MaxVal reached 0. Overwriting do_heart_attack() with forced heart attack.")
+        HA_Table.do_heart_attack(true)
     end
 end
 
@@ -66,14 +73,29 @@ end
 function HA_Table.do_heart_attack(overwrite)
     HeartAttack_EventLock = true
     overwrite = overwrite or false
-    local test = 'wow'
-    if test == 'owo' then
+    if overwrite == true then
         heart_attack_ticker:Cancel()
         heart_attack_ticker = nil
         HeartAttack_GameOver = true
     else
-        printDebug("Heart attack did not trigger. Subtract 1.")
-        subtract_max_val()
+        local MaxVal = HeartAttack_MaxVal
+        local random_number
+        if MaxVal >= int32 then
+            local X1 = math.random(1, int32)
+            local X2 = math.ceil(MaxVal / int32)
+            random_number = X1 * X2
+        else
+            random_number = math.random(1, MaxVal)
+        end
+
+        if random_number == MaxVal then
+            heart_attack_ticker:Cancel()
+            heart_attack_ticker = nil
+            HeartAttack_GameOver = true
+        else
+            printDebug("Heart attack did not trigger. Subtract 1.")
+            subtract_max_val()
+        end
     end
     HeartAttack_EventLock = false
 end
@@ -122,6 +144,7 @@ local function calculate_time_turned()
     stopped_turning_ticker = nil
 end
 
+--Divide damage taken by 10 and subtract that much from HeartAttack_MaxVal
 local function calculate_damage_taken(damage_taken)
     if damage_taken ~= nil then
         local division = math.floor(damage_taken / 10)
@@ -145,7 +168,7 @@ function HA_Table.handle_player_entering_world()
         HeartAttack_Debug = false                   -- Debug flag
         HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
-        HeartAttack_MaxVal = 9223372036854775807    -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_MaxVal = 99999999999999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         printInfo('First time? Type /hahelp for more information.')
     end
@@ -155,6 +178,7 @@ function HA_Table.handle_player_entering_world()
             heart_attack_ticker = C_Timer.NewTicker(3600, HA_Table.do_heart_attack)
         end
     end
+    C_Timer.After(5, function() initial_world_load = true end) -- Set initial_world_load to false after initial load to stop BAG_UPDATE spam when logging into a character
 end
 
 --[[If the player started walking, save current epoch seconds to walk_start_time. If stopped_walking_ticker was already
@@ -253,14 +277,26 @@ end
 --If the player was affected by a crown control or used a taxi, subtract 1 from HeartAttack_MaxVal.
 --If the player changed target, subtract 1 from HeartAttack_MaxVal.
 --If the player talks to an NPC, subtract 1 from HeartAttack_MaxVal.
---If the player casts any instant or non-instant spells, whether they have finished, subtract_max_val 1 from HeartAttack_MaxVal.
+--If the player casts any instant or non-instant spells, whether they have finished, subtract 1 from HeartAttack_MaxVal.
+--If the player learns a new spell or profession, subtract 1 from HeartAttack_MaxVal.
 function HA_Table.handle_common_event(event)
     printDebug(event..": Subtract 1.")
     subtract_max_val()
 end
 
+--If the player interacts with his bag, subtract 1 from HeartAttack_MaxVal.
+function HA_Table.handle_bag()
+    if bag_lock == false then
+        bag_lock = true
+        printDebug("BAG_UPDATE: Subtract 1.")
+        subtract_max_val()
+    end
+end
+
 function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
+    --Initial load of AddOn when player logs in
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
+    --Handling of all events that cause HeartAttack_MaxVal to lower as well as counting of chat messages to use during randomizer
     if HeartAttack_GameOver == false and HeartAttack_EventLock == false then
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving()
         elseif event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving()
@@ -271,7 +307,10 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
         elseif event == 'PLAYER_STARTED_TURNING' then HA_Table.handle_player_started_turning()
         elseif event == 'PLAYER_STOPPED_TURNING' then HA_Table.handle_player_stopped_turning()
         elseif tContains(common_events, event) then HA_Table.handle_common_event(event)
-        elseif tContains(chat_types, event) and arg12 == player_guid then HA_Table.handle_msg(event) end
+        elseif tContains(chat_types, event) and arg12 == player_guid then HA_Table.handle_msg(event)
+        --To avoid double BAG_UPDATE from moving items in the backpack, lock the event to capture only 1 event
+        elseif event == 'BAG_UPDATE' and initial_world_load == true then HA_Table.handle_bag() C_Timer.After(0.1, function() bag_lock = false end)
+        elseif event == 'LEARNED_SPELL_IN_TAB' and initial_world_load == true then HA_Table.handle_common_event(event) end
     end
 end
 
@@ -306,4 +345,6 @@ f:RegisterEvent('QUEST_GREETING')
 f:RegisterEvent('UNIT_SPELLCAST_SENT')
 f:RegisterEvent('BANKFRAME_OPENED')
 f:RegisterEvent('AUCTION_HOUSE_SHOW')
+f:RegisterEvent('BAG_UPDATE')
+f:RegisterEvent('LEARNED_SPELL_IN_TAB')
 f:SetScript('OnEvent', f.OnEvent)
