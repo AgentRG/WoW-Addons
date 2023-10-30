@@ -23,6 +23,7 @@ local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 SLASH_HEART_ATTACK_HELP1 = "/hahelp"
 SLASH_HEART_ATTACK_DEBUG1 = "/hadebug"
 SLASH_HEART_ATTACK_RESET1 = "/hareset"
+SLASH_HEART_ATTACK_ZERO1 = "/haendatzero"
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
 local function printWarning(text) print("|cffffff00Warning (HeartAttack): |cffffffff"..text) end
@@ -33,12 +34,27 @@ SlashCmdList.HEART_ATTACK_RESET = function()
     HeartAttack_Debug = false
     HeartAttack_EventLock = false
     HeartAttack_GameOver = false
+    HeartAttack_EndAtZero = false
     HeartAttack_MaxVal = 99999999999999
     HeartAttack_StartTime = time()
     if not heart_attack_ticker then
-        heart_attack_ticker = C_Timer.NewTicker(3600, HA_Table.do_heart_attack)
+        heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
     end
     printInfo("Add-on has been completely reset to initial parameters with new start time.")
+end
+
+SlashCmdList.HEART_ATTACK_ZERO = function(arg1)
+    if (arg1 == "" or arg1 ~= "true" and arg1 ~= "false") then
+        printWarning("Expected true or false but received: "..arg1)
+    else
+        if arg1 == "true" then
+            HeartAttack_EndAtZero = true
+            printInfo("Zero mode has been enabled. You will get a heart attack when the number reaches 0.")
+        else
+            HeartAttack_EndAtZero = false
+            printInfo("Zero mode has been disabled.")
+        end
+    end
 end
 
 SlashCmdList.HEART_ATTACK_DEBUG = function(arg1)
@@ -55,6 +71,77 @@ SlashCmdList.HEART_ATTACK_DEBUG = function(arg1)
     end
 end
 
+local function register_events()
+    f:RegisterEvent('PLAYER_STARTED_MOVING')
+    f:RegisterEvent('PLAYER_STOPPED_MOVING')
+    f:RegisterEvent('UNIT_COMBAT')
+    --[[f:RegisterEvent('PLAYER_ALIVE') Commenting out PLAYER_ALIVE because it triggers when player turns to ghost as well.
+    Assume revive from other people has magical properties that does not result in scaring.]]
+    f:RegisterEvent('PLAYER_DEAD')
+    f:RegisterEvent('PLAYER_UNGHOST')
+    f:RegisterEvent('PLAYER_LEVEL_UP')
+    f:RegisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
+    f:RegisterEvent('PLAYER_CONTROL_LOST')
+    f:RegisterEvent('PLAYER_TARGET_CHANGED')
+    f:RegisterEvent('PLAYER_STARTED_TURNING')
+    f:RegisterEvent('PLAYER_STOPPED_TURNING')
+    f:RegisterEvent('CHAT_MSG_SAY')
+    f:RegisterEvent('CHAT_MSG_CHANNEL')
+    f:RegisterEvent('CHAT_MSG_TEXT_EMOTE')
+    f:RegisterEvent('CHAT_MSG_EMOTE')
+    f:RegisterEvent('CHAT_MSG_GUILD')
+    f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT')
+    f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
+    f:RegisterEvent('CHAT_MSG_PARTY')
+    f:RegisterEvent('CHAT_MSG_PARTY_LEADER')
+    f:RegisterEvent('CHAT_MSG_RAID')
+    f:RegisterEvent('CHAT_MSG_WHISPER_INFORM')
+    f:RegisterEvent('CHAT_MSG_YELL')
+    f:RegisterEvent('GOSSIP_SHOW')
+    f:RegisterEvent('QUEST_GREETING')
+    f:RegisterEvent('UNIT_SPELLCAST_SENT')
+    f:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED')
+    f:RegisterEvent('BANKFRAME_OPENED')
+    f:RegisterEvent('AUCTION_HOUSE_SHOW')
+    f:RegisterEvent('BAG_UPDATE')
+    f:RegisterEvent('LEARNED_SPELL_IN_TAB')
+end
+
+local function unregister_events()
+    f:UnregisterEvent('PLAYER_STARTED_MOVING')
+    f:UnregisterEvent('PLAYER_STOPPED_MOVING')
+    f:UnregisterEvent('UNIT_COMBAT')
+    --f:RegisterEvent('PLAYER_ALIVE')
+    f:UnregisterEvent('PLAYER_DEAD')
+    f:UnregisterEvent('PLAYER_UNGHOST')
+    f:UnregisterEvent('PLAYER_LEVEL_UP')
+    f:UnregisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
+    f:UnregisterEvent('PLAYER_CONTROL_LOST')
+    f:UnregisterEvent('PLAYER_TARGET_CHANGED')
+    f:UnregisterEvent('PLAYER_STARTED_TURNING')
+    f:UnregisterEvent('PLAYER_STOPPED_TURNING')
+    f:UnregisterEvent('CHAT_MSG_SAY')
+    f:UnregisterEvent('CHAT_MSG_CHANNEL')
+    f:UnregisterEvent('CHAT_MSG_TEXT_EMOTE')
+    f:UnregisterEvent('CHAT_MSG_EMOTE')
+    f:UnregisterEvent('CHAT_MSG_GUILD')
+    f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT')
+    f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
+    f:UnregisterEvent('CHAT_MSG_PARTY')
+    f:UnregisterEvent('CHAT_MSG_PARTY_LEADER')
+    f:UnregisterEvent('CHAT_MSG_RAID')
+    f:UnregisterEvent('CHAT_MSG_WHISPER_INFORM')
+    f:UnregisterEvent('CHAT_MSG_YELL')
+    f:UnregisterEvent('GOSSIP_SHOW')
+    f:UnregisterEvent('QUEST_GREETING')
+    f:UnregisterEvent('UNIT_SPELLCAST_SENT')
+    f:UnregisterEvent('UNIT_SPELLCAST_SUCCEEDED')
+    f:UnregisterEvent('BANKFRAME_OPENED')
+    f:UnregisterEvent('AUCTION_HOUSE_SHOW')
+    f:UnregisterEvent('BAG_UPDATE')
+    f:UnregisterEvent('LEARNED_SPELL_IN_TAB')
+end
+
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
 local function subtract_max_val(value)
     value = value or 1
@@ -64,19 +151,20 @@ local function subtract_max_val(value)
     printDebug("Subtracted "..value.." from "..max_val_copy..".")
     --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
     if HeartAttack_MaxVal <= 0 then
-        printDebug("HeartAttack_MaxVal reached 0. Overwriting do_heart_attack() with forced heart attack.")
-        HA_Table.do_heart_attack(true)
+        printDebug("HeartAttack_MaxVal reached 0. Overwriting roll_heart_attack_chance() with forced heart attack.")
+        HA_Table.roll_heart_attack_chance(true)
     end
 end
 
 --Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
-function HA_Table.do_heart_attack(overwrite)
+function HA_Table.roll_heart_attack_chance(overwrite)
     HeartAttack_EventLock = true
     overwrite = overwrite or false
     if overwrite == true then
         heart_attack_ticker:Cancel()
         heart_attack_ticker = nil
         HeartAttack_GameOver = true
+        unregister_events()
     else
         local MaxVal = HeartAttack_MaxVal
         local random_number
@@ -92,6 +180,7 @@ function HA_Table.do_heart_attack(overwrite)
             heart_attack_ticker:Cancel()
             heart_attack_ticker = nil
             HeartAttack_GameOver = true
+            unregister_events()
         else
             printDebug("Heart attack did not trigger. Subtract 1.")
             subtract_max_val()
@@ -162,22 +251,24 @@ end
 
 --Handles the logic for when the enter players the world (initial login or /reload).
 function HA_Table.handle_player_entering_world()
-    player_guid = player_guid or UnitGUID("player") -- Save player GUID to detect player chatting
     if HeartAttack_FirstTimeDone == nil then
         HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
         HeartAttack_Debug = false                   -- Debug flag
         HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
-        HeartAttack_MaxVal = 99999999999999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_EndAtZero = false             -- Flag to check whether the user wants his odds printed
+        HeartAttack_MaxVal = 99,999,999,999,999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         printInfo('First time? Type /hahelp for more information.')
     end
-    --Every hour, trigger do_heart_attack to see if the player will experience a heart attack
+    --Every 10 minutes, trigger roll_heart_attack_chance to see if the player will experience a heart attack
     if not heart_attack_ticker then
         if HeartAttack_GameOver == false then
-            heart_attack_ticker = C_Timer.NewTicker(3600, HA_Table.do_heart_attack)
+            player_guid = player_guid or UnitGUID("player") -- Save player GUID to detect player chatting
+            heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
         end
     end
+    register_events()
     C_Timer.After(5, function() initial_world_load = true end) -- Set initial_world_load to false after initial load to stop BAG_UPDATE spam when logging into a character
 end
 
@@ -267,6 +358,12 @@ function HA_Table.handle_player_level_up(level)
     subtract_max_val(level)
 end
 
+--If the player successfully casts a spell, subtract 1 from HeartAttack_MaxVal
+function HA_Table.handle_spellcast_succeeded()
+    printDebug("UNIT_SPELLCAST_SUCCEEDED: subtract 1.")
+    subtract_max_val()
+end
+
 --If the player said something in chat, subtract 1 from HeartAttack_MaxVal.
 function HA_Table.handle_msg(chat_type)
     printDebug(chat_type..": Subtract 1.")
@@ -306,6 +403,7 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
         elseif event == 'PLAYER_LEVEL_UP' then HA_Table.handle_player_level_up(arg1)
         elseif event == 'PLAYER_STARTED_TURNING' then HA_Table.handle_player_started_turning()
         elseif event == 'PLAYER_STOPPED_TURNING' then HA_Table.handle_player_stopped_turning()
+        elseif event == 'UNIT_SPELLCAST_SUCCEEDED' and arg1 == 'player' then HA_Table.handle_spellcast_succeeded()
         elseif tContains(common_events, event) then HA_Table.handle_common_event(event)
         elseif tContains(chat_types, event) and arg12 == player_guid then HA_Table.handle_msg(event)
         --To avoid double BAG_UPDATE from moving items in the backpack, lock the event to capture only 1 event
@@ -315,36 +413,4 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
 end
 
 f:RegisterEvent('PLAYER_ENTERING_WORLD')
-f:RegisterEvent('PLAYER_STARTED_MOVING')
-f:RegisterEvent('PLAYER_STOPPED_MOVING')
-f:RegisterEvent('UNIT_COMBAT')
---[[f:RegisterEvent('PLAYER_ALIVE') Commenting out PLAYER_ALIVE because it triggers when player turns to ghost as well.
-Assume revive from other people has magical properties that does not result in scaring.]]
-f:RegisterEvent('PLAYER_DEAD')
-f:RegisterEvent('PLAYER_UNGHOST')
-f:RegisterEvent('PLAYER_LEVEL_UP')
-f:RegisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
-f:RegisterEvent('PLAYER_CONTROL_LOST')
-f:RegisterEvent('PLAYER_TARGET_CHANGED')
-f:RegisterEvent('PLAYER_STARTED_TURNING')
-f:RegisterEvent('PLAYER_STOPPED_TURNING')
-f:RegisterEvent('CHAT_MSG_SAY')
-f:RegisterEvent('CHAT_MSG_CHANNEL')
-f:RegisterEvent('CHAT_MSG_TEXT_EMOTE')
-f:RegisterEvent('CHAT_MSG_EMOTE')
-f:RegisterEvent('CHAT_MSG_GUILD')
-f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT')
-f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
-f:RegisterEvent('CHAT_MSG_PARTY')
-f:RegisterEvent('CHAT_MSG_PARTY_LEADER')
-f:RegisterEvent('CHAT_MSG_RAID')
-f:RegisterEvent('CHAT_MSG_WHISPER_INFORM')
-f:RegisterEvent('CHAT_MSG_YELL')
-f:RegisterEvent('GOSSIP_SHOW')
-f:RegisterEvent('QUEST_GREETING')
-f:RegisterEvent('UNIT_SPELLCAST_SENT')
-f:RegisterEvent('BANKFRAME_OPENED')
-f:RegisterEvent('AUCTION_HOUSE_SHOW')
-f:RegisterEvent('BAG_UPDATE')
-f:RegisterEvent('LEARNED_SPELL_IN_TAB')
 f:SetScript('OnEvent', f.OnEvent)
