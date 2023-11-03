@@ -71,75 +71,41 @@ SlashCmdList.HEART_ATTACK_DEBUG = function(arg1)
     end
 end
 
-local function register_events()
-    f:RegisterEvent('PLAYER_STARTED_MOVING')
-    f:RegisterEvent('PLAYER_STOPPED_MOVING')
-    f:RegisterEvent('UNIT_COMBAT')
-    --[[f:RegisterEvent('PLAYER_ALIVE') Commenting out PLAYER_ALIVE because it triggers when player turns to ghost as well.
-    Assume revive from other people has magical properties that does not result in scaring.]]
-    f:RegisterEvent('PLAYER_DEAD')
-    f:RegisterEvent('PLAYER_UNGHOST')
-    f:RegisterEvent('PLAYER_LEVEL_UP')
-    f:RegisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
-    f:RegisterEvent('PLAYER_CONTROL_LOST')
-    f:RegisterEvent('PLAYER_TARGET_CHANGED')
-    f:RegisterEvent('PLAYER_STARTED_TURNING')
-    f:RegisterEvent('PLAYER_STOPPED_TURNING')
-    f:RegisterEvent('CHAT_MSG_SAY')
-    f:RegisterEvent('CHAT_MSG_CHANNEL')
-    f:RegisterEvent('CHAT_MSG_TEXT_EMOTE')
-    f:RegisterEvent('CHAT_MSG_EMOTE')
-    f:RegisterEvent('CHAT_MSG_GUILD')
-    f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT')
-    f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
-    f:RegisterEvent('CHAT_MSG_PARTY')
-    f:RegisterEvent('CHAT_MSG_PARTY_LEADER')
-    f:RegisterEvent('CHAT_MSG_RAID')
-    f:RegisterEvent('CHAT_MSG_WHISPER_INFORM')
-    f:RegisterEvent('CHAT_MSG_YELL')
-    f:RegisterEvent('GOSSIP_SHOW')
-    f:RegisterEvent('QUEST_GREETING')
-    f:RegisterEvent('UNIT_SPELLCAST_SENT')
-    f:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED')
-    f:RegisterEvent('BANKFRAME_OPENED')
-    f:RegisterEvent('AUCTION_HOUSE_SHOW')
-    f:RegisterEvent('BAG_UPDATE')
-    f:RegisterEvent('LEARNED_SPELL_IN_TAB')
-end
-
 local function unregister_events()
-    f:UnregisterEvent('PLAYER_STARTED_MOVING')
-    f:UnregisterEvent('PLAYER_STOPPED_MOVING')
-    f:UnregisterEvent('UNIT_COMBAT')
-    --f:RegisterEvent('PLAYER_ALIVE')
-    f:UnregisterEvent('PLAYER_DEAD')
-    f:UnregisterEvent('PLAYER_UNGHOST')
-    f:UnregisterEvent('PLAYER_LEVEL_UP')
-    f:UnregisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
-    f:UnregisterEvent('PLAYER_CONTROL_LOST')
-    f:UnregisterEvent('PLAYER_TARGET_CHANGED')
-    f:UnregisterEvent('PLAYER_STARTED_TURNING')
-    f:UnregisterEvent('PLAYER_STOPPED_TURNING')
-    f:UnregisterEvent('CHAT_MSG_SAY')
-    f:UnregisterEvent('CHAT_MSG_CHANNEL')
-    f:UnregisterEvent('CHAT_MSG_TEXT_EMOTE')
-    f:UnregisterEvent('CHAT_MSG_EMOTE')
-    f:UnregisterEvent('CHAT_MSG_GUILD')
-    f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT')
-    f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
-    f:UnregisterEvent('CHAT_MSG_PARTY')
-    f:UnregisterEvent('CHAT_MSG_PARTY_LEADER')
-    f:UnregisterEvent('CHAT_MSG_RAID')
-    f:UnregisterEvent('CHAT_MSG_WHISPER_INFORM')
-    f:UnregisterEvent('CHAT_MSG_YELL')
-    f:UnregisterEvent('GOSSIP_SHOW')
-    f:UnregisterEvent('QUEST_GREETING')
-    f:UnregisterEvent('UNIT_SPELLCAST_SENT')
-    f:UnregisterEvent('UNIT_SPELLCAST_SUCCEEDED')
-    f:UnregisterEvent('BANKFRAME_OPENED')
-    f:UnregisterEvent('AUCTION_HOUSE_SHOW')
-    f:UnregisterEvent('BAG_UPDATE')
-    f:UnregisterEvent('LEARNED_SPELL_IN_TAB')
+    if HeartAttack_GameOver == true then
+        f:UnregisterEvent('PLAYER_STARTED_MOVING')
+        f:UnregisterEvent('PLAYER_STOPPED_MOVING')
+        f:UnregisterEvent('UNIT_COMBAT')
+        --f:RegisterEvent('PLAYER_ALIVE')
+        f:UnregisterEvent('PLAYER_DEAD')
+        f:UnregisterEvent('PLAYER_UNGHOST')
+        f:UnregisterEvent('PLAYER_LEVEL_UP')
+        f:UnregisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
+        f:UnregisterEvent('PLAYER_CONTROL_LOST')
+        f:UnregisterEvent('PLAYER_TARGET_CHANGED')
+        f:UnregisterEvent('PLAYER_STARTED_TURNING')
+        f:UnregisterEvent('PLAYER_STOPPED_TURNING')
+        f:UnregisterEvent('CHAT_MSG_SAY')
+        f:UnregisterEvent('CHAT_MSG_CHANNEL')
+        f:UnregisterEvent('CHAT_MSG_TEXT_EMOTE')
+        f:UnregisterEvent('CHAT_MSG_EMOTE')
+        f:UnregisterEvent('CHAT_MSG_GUILD')
+        f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT')
+        f:UnregisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
+        f:UnregisterEvent('CHAT_MSG_PARTY')
+        f:UnregisterEvent('CHAT_MSG_PARTY_LEADER')
+        f:UnregisterEvent('CHAT_MSG_RAID')
+        f:UnregisterEvent('CHAT_MSG_WHISPER_INFORM')
+        f:UnregisterEvent('CHAT_MSG_YELL')
+        f:UnregisterEvent('GOSSIP_SHOW')
+        f:UnregisterEvent('QUEST_GREETING')
+        f:UnregisterEvent('UNIT_SPELLCAST_SENT')
+        f:UnregisterEvent('UNIT_SPELLCAST_SUCCEEDED')
+        f:UnregisterEvent('BANKFRAME_OPENED')
+        f:UnregisterEvent('AUCTION_HOUSE_SHOW')
+        f:UnregisterEvent('BAG_UPDATE')
+        f:UnregisterEvent('LEARNED_SPELL_IN_TAB')
+    end
 end
 
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
@@ -169,9 +135,14 @@ function HA_Table.roll_heart_attack_chance(overwrite)
         local MaxVal = HeartAttack_MaxVal
         local random_number
         if MaxVal >= int32 then
-            local X1 = math.random(1, int32)
-            local X2 = math.ceil(MaxVal / int32)
-            random_number = X1 * X2
+            local X1, X2, X3 = math.random(1, int32), math.ceil(MaxVal / int32), math.floor(MaxVal / int32)
+            local option_1, option_2 = X1 * X2, X1 * X3
+            local pick_one = math.random(1, 2)
+            if pick_one == 1 then
+                random_number = option_1
+            else
+                random_number = option_2
+            end
         else
             random_number = math.random(1, MaxVal)
         end
@@ -257,7 +228,7 @@ function HA_Table.handle_player_entering_world()
         HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
         HeartAttack_EndAtZero = false             -- Flag to check whether the user wants his odds printed
-        HeartAttack_MaxVal = 99,999,999,999,999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_MaxVal = 99999999999999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         printInfo('First time? Type /hahelp for more information.')
     end
@@ -268,7 +239,6 @@ function HA_Table.handle_player_entering_world()
             heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
         end
     end
-    register_events()
     C_Timer.After(5, function() initial_world_load = true end) -- Set initial_world_load to false after initial load to stop BAG_UPDATE spam when logging into a character
 end
 
@@ -413,4 +383,38 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
 end
 
 f:RegisterEvent('PLAYER_ENTERING_WORLD')
+f:RegisterEvent('PLAYER_STARTED_MOVING')
+f:RegisterEvent('PLAYER_STOPPED_MOVING')
+f:RegisterEvent('UNIT_COMBAT')
+--[[f:RegisterEvent('PLAYER_ALIVE') Commenting out PLAYER_ALIVE because it triggers when player turns to ghost as well.
+Assume revive from other people has magical properties that does not result in scaring.]]
+f:RegisterEvent('PLAYER_DEAD')
+f:RegisterEvent('PLAYER_UNGHOST')
+f:RegisterEvent('PLAYER_LEVEL_UP')
+f:RegisterEvent('PLAYER_MOUNT_DISPLAY_CHANGED')
+f:RegisterEvent('PLAYER_CONTROL_LOST')
+f:RegisterEvent('PLAYER_TARGET_CHANGED')
+f:RegisterEvent('PLAYER_STARTED_TURNING')
+f:RegisterEvent('PLAYER_STOPPED_TURNING')
+f:RegisterEvent('CHAT_MSG_SAY')
+f:RegisterEvent('CHAT_MSG_CHANNEL')
+f:RegisterEvent('CHAT_MSG_TEXT_EMOTE')
+f:RegisterEvent('CHAT_MSG_EMOTE')
+f:RegisterEvent('CHAT_MSG_GUILD')
+f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT')
+f:RegisterEvent('CHAT_MSG_INSTANCE_CHAT_LEADER')
+f:RegisterEvent('CHAT_MSG_PARTY')
+f:RegisterEvent('CHAT_MSG_PARTY_LEADER')
+f:RegisterEvent('CHAT_MSG_RAID')
+f:RegisterEvent('CHAT_MSG_WHISPER_INFORM')
+f:RegisterEvent('CHAT_MSG_YELL')
+f:RegisterEvent('GOSSIP_SHOW')
+f:RegisterEvent('QUEST_GREETING')
+f:RegisterEvent('UNIT_SPELLCAST_SENT')
+f:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED')
+f:RegisterEvent('BANKFRAME_OPENED')
+f:RegisterEvent('AUCTION_HOUSE_SHOW')
+f:RegisterEvent('BAG_UPDATE')
+f:RegisterEvent('LEARNED_SPELL_IN_TAB')
 f:SetScript('OnEvent', f.OnEvent)
+unregister_events() --Triggers only if the game ended
