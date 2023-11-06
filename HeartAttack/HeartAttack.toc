@@ -2,6 +2,6 @@
 ## Version: 1.0.0
 ## Title: Heart Attack
 ## Author: AgentRG
-## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_MaxVal, HeartAttack_DeadTime, HeartAttack_GameOver, HeartAttack_Debug, HeartAttack_StartTime, HeartAttack_EventLock, HeartAttack_EndAtZero
+## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_MaxVal, HeartAttack_DeadTime, HeartAttack_GameOver, HeartAttack_Debug, HeartAttack_StartTime, HeartAttack_EventLock, HeartAttack_EndAtZero, HeartAttack_24HoursStart
 
 HeartAttack.lua
