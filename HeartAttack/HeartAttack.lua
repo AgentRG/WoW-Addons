@@ -7,6 +7,7 @@ local stopped_walking_ticker
 local stopped_turning_ticker
 local initial_world_load = false
 local bag_lock = false
+local spell_lock = false
 local heart_attack_ticker
 local math = math
 local int32 = 2147483647
@@ -18,7 +19,7 @@ local chat_types = {'CHAT_MSG_SAY', 'CHAT_MSG_CHANNEL', 'CHAT_MSG_TEXT_EMOTE', '
                     'CHAT_MSG_INSTANCE_CHAT', 'CHAT_MSG_INSTANCE_CHAT_LEADER', 'CHAT_MSG_PARTY',
                     'CHAT_MSG_PARTY_LEADER', 'CHAT_MSG_RAID', 'CHAT_MSG_WHISPER_INFORM', 'CHAT_MSG_YELL'}
 local common_events = {'PLAYER_MOUNT_DISPLAY_CHANGED', 'PLAYER_CONTROL_LOST', 'PLAYER_TARGET_CHANGED', 'GOSSIP_SHOW',
-                       'QUEST_GREETING', 'AUCTION_HOUSE_SHOW', 'BANKFRAME_OPENED', 'UNIT_SPELLCAST_SENT'}
+                       'QUEST_GREETING', 'AUCTION_HOUSE_SHOW', 'BANKFRAME_OPENED'}
 local IsMounted = IsMounted
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 SLASH_HEART_ATTACK_HELP1 = "/hahelp"
@@ -128,9 +129,9 @@ end
 
 --Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
 function HA_Table.roll_heart_attack_chance(overwrite)
-    HeartAttack_EventLock = true
     overwrite = overwrite or false
-    if overwrite then
+    HeartAttack_EventLock = true
+    if overwrite == true then
         heart_attack_ticker:Cancel()
         heart_attack_ticker = nil
         HeartAttack_GameOver = true
@@ -159,6 +160,9 @@ function HA_Table.roll_heart_attack_chance(overwrite)
                 printDebug("Heart attack did not trigger. Subtract 1.")
                 HA_Table.subtract_max_val()
             end
+        else
+            printDebug("Zero mode is enabled. Heart attack role chance did not happen. Subtract 1.")
+            HA_Table.subtract_max_val()
         end
     end
     HeartAttack_EventLock = false
@@ -385,6 +389,16 @@ function HA_Table.handle_bag()
     end
 end
 
+--If the player sent a spell, subtract 1 from HeartAttack_MaxVal.
+function HA_Table.handle_spellcast_sent()
+    if spell_lock == false then
+        spell_lock = true
+        f:UnregisterEvent('UNIT_SPELLCAST_SUCCEEDED')
+        printDebug("UNIT_SPELLCAST_SENT: subtract 1.")
+        HA_Table.subtract_max_val()
+    end
+end
+
 function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
     --Initial load of AddOn when player logs in
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
@@ -403,6 +417,9 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
         elseif tContains(chat_types, event) and arg12 == player_guid then HA_Table.handle_msg(event)
         --To avoid double BAG_UPDATE from moving items in the backpack, lock the event to capture only 1 event
         elseif event == 'BAG_UPDATE' and initial_world_load then HA_Table.handle_bag() C_Timer.After(0.1, function() bag_lock = false end)
+        --To avoid instant spell casts being counted twice, unregister UNIT_SPELLCAST_SUCCEEDED and then register it shortly after
+        elseif event == 'UNIT_SPELLCAST_SENT' then HA_Table.handle_spellcast_sent()
+            C_Timer.After(0.1, function() spell_lock = false f:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED') end)
         elseif event == 'LEARNED_SPELL_IN_TAB' and initial_world_load then HA_Table.handle_common_event(event) end
     end
 end
