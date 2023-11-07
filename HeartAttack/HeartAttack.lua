@@ -1,5 +1,12 @@
 local HA_Table = {}
 
+---READ FIRST---
+---If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
+---how often a chance of a heart attack roles, update the following values here to your desired number and reset the mod
+---in the options page.
+local HA_MaxVal = 99999999999999 --Bigger number equals potentially longer game. 99999999999999 is the maximum possible value
+local HA_Frequency = 600 --How often to role for heart attack chance. Default is 600 seconds (10 minutes).
+
 local f = CreateFrame('Frame', 'HeartAttack')
 local walk_start_time
 local turn_start_time
@@ -11,7 +18,7 @@ local spell_lock = false
 local heart_attack_ticker
 local math = math
 local int32 = 2147483647
-local player_guid = UnitGUID("player") -- Save player GUID to detect player chatting
+local player_guid = UnitGUID("player") -- Save player GUID to detect player chat or emotes
 local time = time
 local tContains = tContains
 local C_Timer = C_Timer
@@ -22,7 +29,6 @@ local common_events = {'PLAYER_MOUNT_DISPLAY_CHANGED', 'PLAYER_CONTROL_LOST', 'P
                        'QUEST_GREETING', 'AUCTION_HOUSE_SHOW', 'BANKFRAME_OPENED'}
 local IsMounted = IsMounted
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
-local game_over_sound = "Interface\\AddOns\\HeartAttack\\Resources\\GameOverSound.mp3"
 SLASH_HEART_ATTACK_HELP1 = "/hahelp"
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
@@ -44,7 +50,8 @@ local function create_interface()
     local zeroMode = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
     zeroMode.Text:SetText("Enable Zero Mode")
     zeroMode:SetPoint("TOPLEFT", 8, -10)
-    zeroMode.tooltip = "When enabled, the game will end when the player exhausts the invisible number."
+    zeroMode.tooltip = "When enabled, the game will end when the player exhausts the number used for the game. Warning:"..
+            " With the default value, the game can potentially take a long time with Zero Mode enabled."
     if HeartAttack_EndAtZero then
         zeroMode:SetChecked(true)
     else
@@ -101,17 +108,17 @@ local function create_interface()
                 zeroMode:SetChecked(false)
                 HeartAttack_EventLock = false
                 HeartAttack_GameOver = false
-                HeartAttack_MaxVal = 99999999999999
+                HeartAttack_MaxVal = HA_MaxVal
                 HeartAttack_StartTime = time()
                 HeartAttack_24HoursStart = time()
                 heart_attack_ticker = nil
                 if not heart_attack_ticker then
-                    heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
+                    heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
                 end
                 printInfo("Add-on has been completely reset to initial parameters with new start time.")
             end,
             OnCancel = function()
-                heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
+                heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
             end,
             timeout = 0,
             whileDead = true,
@@ -119,9 +126,19 @@ local function create_interface()
         }
         StaticPopup_Show("HeartAttack")
     end)
+
+    local userNote = panel:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    userNote:SetPoint("TOPLEFT", 8, 0)
+    userNote:SetPoint("BOTTOMRIGHT", -8, 0)
+    userNote:SetJustifyH("LEFT")
+    userNote:SetText("Note: If you'd like to change the length of the game, or how often the chance for a heart attack"..
+            " roles, open the file HeartAttack/HeartAttack.lua in your text editor of choice and read line 3 that says"..
+            " READ FIRST for instructions.")
+    userNote:SetWordWrap(true)
     InterfaceOptions_AddCategory(panel, true)
 end
 
+--Game Over frame
 local function do_heart_attack()
     local time_played = time() - HeartAttack_StartTime
     local years = math.floor(time_played / 31536000)
@@ -141,11 +158,11 @@ local function do_heart_attack()
     local minuteOrMinutes if minutes == 1 then minuteOrMinutes = 'minute' else minuteOrMinutes = 'minutes' end
     local secondOrSeconds if seconds == 1 then secondOrSeconds = 'seconds' else secondOrSeconds = 'seconds' end
 
-    PlaySoundFile(game_over_sound, "Master")
-    local f = CreateFrame('Frame', 'HeartAttackGameOver', UIParent, 'BackdropTemplate')
-    f:SetSize(450, 220)
-    f:SetPoint("CENTER", 0, 0)
-    f:SetBackdrop({
+    PlaySoundFile("Interface\\AddOns\\HeartAttack\\Resources\\GameOverSound.mp3", "Master")
+    local gameOverFrame = CreateFrame('Frame', 'HeartAttackGameOver', UIParent, 'BackdropTemplate')
+    gameOverFrame:SetSize(450, 220)
+    gameOverFrame:SetPoint("CENTER", 0, 0)
+    gameOverFrame:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         tile = true,
@@ -153,24 +170,24 @@ local function do_heart_attack()
         edgeSize = 16,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     })
-    f:SetBackdropColor(0, 0, 0, 1)
-    f:SetMovable(true)
-    f:EnableMouse(true)
-    f:SetResizable(false)
-    f:SetScript("OnMouseDown", function(self)
+    gameOverFrame:SetBackdropColor(0, 0, 0, 1)
+    gameOverFrame:SetMovable(true)
+    gameOverFrame:EnableMouse(true)
+    gameOverFrame:SetResizable(false)
+    gameOverFrame:SetScript("OnMouseDown", function(self)
         self:StartMoving()
     end)
-    f:SetScript("OnMouseUp", function(self)
+    gameOverFrame:SetScript("OnMouseUp", function(self)
         self:StopMovingOrSizing()
     end)
-    local gameOverString = f:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    local gameOverString = gameOverFrame:CreateFontString(nil, "ARTWORK", "GameFontWhite")
     gameOverString:SetPoint("TOP", 6, -10)
     gameOverString:SetFont("Fonts\\MORPHEUS.TTF", 30)
     gameOverString:SetTextColor(0.78, 0.61, 0.43, 1)
     gameOverString:SetText("Game Over")
-    local description = f:CreateFontString(nil, "ARTWORK", "GameFontWhite")
-    description:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -50)
-    description:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 50)
+    local description = gameOverFrame:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    description:SetPoint("TOPLEFT", gameOverFrame, "TOPLEFT", 6, -50)
+    description:SetPoint("BOTTOMRIGHT", gameOverFrame, "BOTTOMRIGHT", -6, 50)
     description:SetText("You suddenly feel a discomfort in your left side of the chest. You feel weak, light-headed,"..
             " and a shortness of breath mixed with cold sweat takes over you. You suffered a heart attack after "..
             "exploring Azeroth for "
@@ -184,13 +201,13 @@ local function do_heart_attack()
             " page. The mod will now stop tracking character activity until reset."..
             "\n\nThanks for playing AgentRG's HeartAttack mod!")
     description:SetWordWrap(true)
-    local closeButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local closeButton = CreateFrame("Button", nil, gameOverFrame, "UIPanelButtonTemplate")
     closeButton:SetText("Close Prompt")
     closeButton:SetWidth(100)
     closeButton:SetPoint("BOTTOM", 0, 6)
     closeButton:SetScript("OnClick", function()
         PlaySoundFile(567407, "Master")
-        f:Hide()
+        gameOverFrame:Hide()
     end)
 end
 
@@ -339,7 +356,7 @@ function HA_Table.handle_player_entering_world()
         HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
         HeartAttack_EndAtZero = false               -- Flag to check whether the user wants his odds printed
-        HeartAttack_MaxVal = 99999999999999         -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_MaxVal = HA_MaxVal              -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         HeartAttack_24HoursStart = time()           -- Used for natural degradation of HeartAttack_MaxVal
         printInfo('First time? Type /hahelp for more information.')
@@ -347,7 +364,7 @@ function HA_Table.handle_player_entering_world()
     --Every 10 minutes, trigger roll_heart_attack_chance to see if the player will experience a heart attack
     if not heart_attack_ticker then
         if HeartAttack_GameOver == false then
-            heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
+            heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
         end
     end
     create_interface()
