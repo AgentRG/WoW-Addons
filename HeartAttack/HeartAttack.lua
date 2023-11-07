@@ -137,6 +137,7 @@ local function create_interface()
     userNote:SetWordWrap(true)
     InterfaceOptions_AddCategory(panel, true)
 end
+create_interface()
 
 --Game Over frame
 local function do_heart_attack()
@@ -220,7 +221,7 @@ function HA_Table.subtract_max_val(value)
     printDebug("HA_Table.subtract_max_val("..value.."): Subtracted "..value.." from "..max_val_copy..".")
     --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
     if HeartAttack_MaxVal <= 0 then
-        printDebug("HeartAttack_MaxVal reached 0. Overwriting roll_heart_attack_chance() with forced heart attack.")
+        printDebug("HeartAttack_MaxVal reached 0. Overwriting HA_Table.roll_heart_attack_chance() with forced heart attack.")
         HA_Table.roll_heart_attack_chance(true)
     end
 end
@@ -367,7 +368,6 @@ function HA_Table.handle_player_entering_world()
             heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
         end
     end
-    create_interface()
     calculate_24_hours_passed()
     C_Timer.After(5, function() initial_world_load = true end) -- Set initial_world_load to false after initial load to stop BAG_UPDATE spam when logging into a character
 end
