@@ -22,6 +22,7 @@ local common_events = {'PLAYER_MOUNT_DISPLAY_CHANGED', 'PLAYER_CONTROL_LOST', 'P
                        'QUEST_GREETING', 'AUCTION_HOUSE_SHOW', 'BANKFRAME_OPENED'}
 local IsMounted = IsMounted
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
+local game_over_sound = "Interface\\AddOns\\HeartAttack\\Resources\\GameOverSound.mp3"
 SLASH_HEART_ATTACK_HELP1 = "/hahelp"
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
@@ -30,13 +31,14 @@ local function printDebug(text) if HeartAttack_Debug then print("|cff00ff00Debug
 
 SlashCmdList.HEART_ATTACK_HELP = function()
     printInfo("The mod functions by rolling a chance for the player to experience a \"Heart Attack\" every 10 "..
-     "minutes. The chance of having one is determined by the player's activity throughout the character's "..
-      "playtime. Additional settings for the mod can be found under Options → AddOns → Heart Attack.")
+            "minutes (unless Zero Mode is enabled). The chance of having one is determined by the player's activity"..
+            " throughout the character's playtime. Additional settings for the mod can be found under Options →"..
+            " AddOns → Heart Attack.")
 end
 
 --Options frame
 local function create_interface()
-    local panel = CreateFrame("Frame", "Heart Attack Settings")
+    local panel = CreateFrame("Frame", "HeartAttackSettings")
     panel.name = "Heart Attack"
 
     local zeroMode = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
@@ -84,6 +86,9 @@ local function create_interface()
     resetButton:SetWidth(100)
     resetButton:SetPoint("TOPLEFT", 8, -55)
     resetButton:SetScript("OnClick", function()
+        if heart_attack_ticker ~= nil then
+            heart_attack_ticker:Cancel()
+        end
         StaticPopupDialogs["HeartAttack"] = {
             text = "Are you sure you want to reset the mod? This will reset all values to default and start anew.",
             button1 = "Yes",
@@ -99,10 +104,14 @@ local function create_interface()
                 HeartAttack_MaxVal = 99999999999999
                 HeartAttack_StartTime = time()
                 HeartAttack_24HoursStart = time()
+                heart_attack_ticker = nil
                 if not heart_attack_ticker then
                     heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
                 end
                 printInfo("Add-on has been completely reset to initial parameters with new start time.")
+            end,
+            OnCancel = function()
+                heart_attack_ticker = C_Timer.NewTicker(600, HA_Table.roll_heart_attack_chance)
             end,
             timeout = 0,
             whileDead = true,
@@ -111,6 +120,78 @@ local function create_interface()
         StaticPopup_Show("HeartAttack")
     end)
     InterfaceOptions_AddCategory(panel, true)
+end
+
+local function do_heart_attack()
+    local time_played = time() - HeartAttack_StartTime
+    local years = math.floor(time_played / 31536000)
+    time_played = time_played - years * 31536000
+    local months = math.floor(time_played / 2592000)
+    time_played = time_played - months * 2592000
+    local days = math.floor(time_played / 86400)
+    time_played = time_played - days * 86400
+    local hours = math.floor(time_played / 3600)
+    time_played = time_played - hours * 3600
+    local minutes = math.floor(time_played / 60)
+    local seconds = time_played - minutes * 60
+    local yearOrYears if years == 1 then yearOrYears = 'year' else yearOrYears = 'years' end
+    local monthOrMonths if months == 1 then monthOrMonths = 'month' else monthOrMonths = 'months' end
+    local dayOrDays if days == 1 then dayOrDays = 'day' else dayOrDays = 'days' end
+    local hourOrHours if hours == 1 then hourOrHours = 'hour' else hourOrHours = 'hours' end
+    local minuteOrMinutes if minutes == 1 then minuteOrMinutes = 'minute' else minuteOrMinutes = 'minutes' end
+    local secondOrSeconds if seconds == 1 then secondOrSeconds = 'seconds' else secondOrSeconds = 'seconds' end
+
+    PlaySoundFile(game_over_sound, "Master")
+    local f = CreateFrame('Frame', 'HeartAttackGameOver', UIParent, 'BackdropTemplate')
+    f:SetSize(450, 220)
+    f:SetPoint("CENTER", 0, 0)
+    f:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    f:SetBackdropColor(0, 0, 0, 1)
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:SetResizable(false)
+    f:SetScript("OnMouseDown", function(self)
+        self:StartMoving()
+    end)
+    f:SetScript("OnMouseUp", function(self)
+        self:StopMovingOrSizing()
+    end)
+    local gameOverString = f:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    gameOverString:SetPoint("TOP", 6, -10)
+    gameOverString:SetFont("Fonts\\MORPHEUS.TTF", 30)
+    gameOverString:SetTextColor(0.78, 0.61, 0.43, 1)
+    gameOverString:SetText("Game Over")
+    local description = f:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    description:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -50)
+    description:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 50)
+    description:SetText("You suddenly feel a discomfort in your left side of the chest. You feel weak, light-headed,"..
+            " and a shortness of breath mixed with cold sweat takes over you. You suffered a heart attack after "..
+            "exploring Azeroth for "
+            ..years.." "..yearOrYears..", "
+            ..months.." "..monthOrMonths..", "
+            ..days.." "..dayOrDays..", "
+            ..hours.." "..hourOrHours..", "
+            ..minutes.." "..minuteOrMinutes.." and "
+            ..seconds.." "..secondOrSeconds.."."..
+            "\n\nAlthough your life is now over (in this mod), you can always start anew through the AddOn options"..
+            " page. The mod will now stop tracking character activity until reset."..
+            "\n\nThanks for playing AgentRG's HeartAttack mod!")
+    description:SetWordWrap(true)
+    local closeButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    closeButton:SetText("Close Prompt")
+    closeButton:SetWidth(100)
+    closeButton:SetPoint("BOTTOM", 0, 6)
+    closeButton:SetScript("OnClick", function()
+        PlaySoundFile(567407, "Master")
+        f:Hide()
+    end)
 end
 
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
@@ -135,6 +216,7 @@ function HA_Table.roll_heart_attack_chance(overwrite)
         heart_attack_ticker:Cancel()
         heart_attack_ticker = nil
         HeartAttack_GameOver = true
+        do_heart_attack()
     else
         if HeartAttack_EndAtZero == false then
             local MaxVal = HeartAttack_MaxVal
@@ -156,6 +238,7 @@ function HA_Table.roll_heart_attack_chance(overwrite)
                 heart_attack_ticker:Cancel()
                 heart_attack_ticker = nil
                 HeartAttack_GameOver = true
+                do_heart_attack()
             else
                 printDebug("Heart attack did not trigger. Subtract 1.")
                 HA_Table.subtract_max_val()
