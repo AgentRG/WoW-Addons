@@ -4,7 +4,7 @@ local HA_Table = {}
 ---If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
 ---how often a chance of a heart attack roles, update the following values here to your desired number and reset the mod
 ---in the options page.
-local HA_MaxVal = 99999999999999 --Bigger number equals potentially longer game. 99999999999999 is the maximum possible value
+local HA_MaxVal = 99999999999999 --Bigger number equals potentially longer game. 99999999999999 is the maximum possible value.
 local HA_Frequency = 600 --How often to role for heart attack chance. Default is 600 seconds (10 minutes).
 
 local f = CreateFrame('Frame', 'HeartAttack')
