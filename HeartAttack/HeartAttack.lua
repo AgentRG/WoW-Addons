@@ -315,7 +315,7 @@ end
 local function calculate_24_hours_passed()
     if HeartAttack_24HoursStart ~= nil then
         local end_time = time()
-        local hours_passed = HeartAttack_24HoursStart - end_time
+        local hours_passed = end_time - HeartAttack_24HoursStart
         if hours_passed >= 86400 then
             hours_passed = math.floor(hours_passed / 86400)
             if hours_passed >= 0 then
