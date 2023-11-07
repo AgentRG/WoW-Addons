@@ -5,7 +5,7 @@ local walk_start_time
 local turn_start_time
 local stopped_walking_ticker
 local stopped_turning_ticker
-local initial_world_load = false
+local initial_world_load
 local bag_lock = false
 local spell_lock = false
 local heart_attack_ticker
@@ -332,6 +332,7 @@ end
 
 --Handles the logic for when the enter players the world (initial login or /reload).
 function HA_Table.handle_player_entering_world()
+    initial_world_load = false
     if HeartAttack_FirstTimeDone == nil then
         HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
         HeartAttack_Debug = false                   -- Debug flag
