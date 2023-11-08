@@ -1,9 +1,9 @@
 local HA_Table = {}
 
----READ FIRST---
----If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
----how often a chance of a heart attack roles, update the following values here to your desired number and reset the mod
----in the options page.
+--[[READ FIRST
+If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
+how often a chance of a heart attack roles, update the following values here to your desired number and reset the mod
+in the options page.]]
 local HA_MaxVal = 99999999999999 --Bigger number equals potentially longer game. 99999999999999 is the maximum possible value.
 local HA_Frequency = 600 --How often to role for heart attack chance. Default is 600 seconds (10 minutes).
 
@@ -13,6 +13,7 @@ local turn_start_time
 local stopped_walking_ticker
 local stopped_turning_ticker
 local initial_world_load
+local initial_game_load = false
 local bag_lock = false
 local spell_lock = false
 local heart_attack_ticker
@@ -33,7 +34,7 @@ SLASH_HEART_ATTACK_HELP1 = "/hahelp"
 
 local function printInfo(text) print("|cff00ffffInfo (HeartAttack): |cffffffff"..text) end
 local function printWarning(text) print("|cffffff00Warning (HeartAttack): |cffffffff"..text) end
-local function printDebug(text) if HeartAttack_Debug then print("|cff00ff00Debug (HeartAttack): |cffffffff"..text) end end
+local function printDebug(text) if HeartAttack_GlobalTable.HeartAttack_Debug == true then print("|cff00ff00Debug (HeartAttack): |cffffffff"..text) end end
 
 SlashCmdList.HEART_ATTACK_HELP = function()
     printInfo("The mod functions by rolling a chance for the player to experience a \"Heart Attack\" every 10 "..
@@ -52,7 +53,7 @@ local function create_interface()
     zeroMode:SetPoint("TOPLEFT", 8, -10)
     zeroMode.tooltip = "When enabled, the game will end when the player exhausts the number used for the game. Warning:"..
             " With the default value, the game can potentially take a long time with Zero Mode enabled."
-    if HeartAttack_EndAtZero then
+    if HeartAttack_GlobalTable.HeartAttack_EndAtZero == true then
         zeroMode:SetChecked(true)
     else
         zeroMode:SetChecked(false)
@@ -60,10 +61,10 @@ local function create_interface()
     zeroMode:SetScript("OnClick", function()
         local checkStatus = zeroMode:GetChecked()
         if checkStatus then
-            HeartAttack_EndAtZero = true
+            HeartAttack_GlobalTable.HeartAttack_EndAtZero = true
             printInfo("Zero mode has been enabled. You will get a heart attack when the number reaches 0.")
         else
-            HeartAttack_EndAtZero = false
+            HeartAttack_GlobalTable.HeartAttack_EndAtZero = false
             printInfo("Zero mode has been disabled.")
         end
     end)
@@ -72,7 +73,7 @@ local function create_interface()
     debugButton.Text:SetText("Enable Debugger")
     debugButton:SetPoint("TOPLEFT", 8, -30)
     debugButton.tooltip = "Enable the debugger for event handling and other functions."
-    if HeartAttack_Debug then
+    if HeartAttack_GlobalTable.HeartAttack_Debug == true then
         debugButton:SetChecked(true)
     else
         debugButton:SetChecked(false)
@@ -80,10 +81,10 @@ local function create_interface()
     debugButton:SetScript("OnClick", function()
         local checkStatus = debugButton:GetChecked()
         if checkStatus then
-            HeartAttack_Debug = true
+            HeartAttack_GlobalTable.HeartAttack_Debug = true
             printInfo("Debugger has been enabled.")
         else
-            HeartAttack_Debug = false
+            HeartAttack_GlobalTable.HeartAttack_Debug = false
             printInfo("Debugger has been disabled.")
         end
     end)
@@ -102,15 +103,16 @@ local function create_interface()
             button2 = "No",
             OnAccept = function()
                 HeartAttack_FirstTimeDone = true
-                HeartAttack_Debug = false
+                HeartAttack_GlobalTable = {}
+                HeartAttack_GlobalTable.HeartAttack_Debug = false
                 debugButton:SetChecked(false)
-                HeartAttack_EndAtZero = false
+                HeartAttack_GlobalTable.HeartAttack_EndAtZero = false
                 zeroMode:SetChecked(false)
-                HeartAttack_EventLock = false
-                HeartAttack_GameOver = false
-                HeartAttack_MaxVal = HA_MaxVal
-                HeartAttack_StartTime = time()
-                HeartAttack_24HoursStart = time()
+                HeartAttack_GlobalTable.HeartAttack_EventLock = false
+                HeartAttack_GlobalTable.HeartAttack_GameOver = false
+                HeartAttack_GlobalTable.HeartAttack_MaxVal = HA_MaxVal
+                HeartAttack_GlobalTable.HeartAttack_StartTime = time()
+                HeartAttack_GlobalTable.HeartAttack_24HoursStart = time()
                 heart_attack_ticker = nil
                 if not heart_attack_ticker then
                     heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
@@ -137,11 +139,10 @@ local function create_interface()
     userNote:SetWordWrap(true)
     InterfaceOptions_AddCategory(panel, true)
 end
-create_interface()
 
 --Game Over frame
 local function do_heart_attack()
-    local time_played = time() - HeartAttack_StartTime
+    local time_played = time() - HeartAttack_GlobalTable.HeartAttack_StartTime
     local years = math.floor(time_played / 31536000)
     time_played = time_played - years * 31536000
     local months = math.floor(time_played / 2592000)
@@ -215,12 +216,12 @@ end
 --Main function to lower the value of HeartAttack_MaxVal every time the player does an action.
 function HA_Table.subtract_max_val(value)
     value = value or 1
-    local max_val_copy = HeartAttack_MaxVal
+    local max_val_copy = HeartAttack_GlobalTable.HeartAttack_MaxVal
     max_val_copy = max_val_copy - value
-    HeartAttack_MaxVal = max_val_copy
+    HeartAttack_GlobalTable.HeartAttack_MaxVal = max_val_copy
     printDebug("HA_Table.subtract_max_val("..value.."): Subtracted "..value.." from "..max_val_copy..".")
     --In case HeartAttack_MaxVal became 0 or less, initiate heart attack.
-    if HeartAttack_MaxVal <= 0 then
+    if HeartAttack_GlobalTable.HeartAttack_MaxVal <= 0 then
         printDebug("HeartAttack_MaxVal reached 0. Overwriting HA_Table.roll_heart_attack_chance() with forced heart attack.")
         HA_Table.roll_heart_attack_chance(true)
     end
@@ -229,15 +230,15 @@ end
 --Main function that determines whether a heart attack will occur and plays all the actions during heart attack event.
 function HA_Table.roll_heart_attack_chance(overwrite)
     overwrite = overwrite or false
-    HeartAttack_EventLock = true
+    HeartAttack_GlobalTable.HeartAttack_EventLock = true
     if overwrite == true then
         heart_attack_ticker:Cancel()
         heart_attack_ticker = nil
-        HeartAttack_GameOver = true
+        HeartAttack_GlobalTable.HeartAttack_GameOver = true
         do_heart_attack()
     else
-        if HeartAttack_EndAtZero == false then
-            local MaxVal = HeartAttack_MaxVal
+        if HeartAttack_GlobalTable.HeartAttack_EndAtZero == false then
+            local MaxVal = HeartAttack_GlobalTable.HeartAttack_MaxVal
             local random_number
             if MaxVal >= int32 then
                 local X1, X2, X3 = math.random(1, int32), math.ceil(MaxVal / int32), math.floor(MaxVal / int32)
@@ -255,7 +256,7 @@ function HA_Table.roll_heart_attack_chance(overwrite)
             if random_number == MaxVal then
                 heart_attack_ticker:Cancel()
                 heart_attack_ticker = nil
-                HeartAttack_GameOver = true
+                HeartAttack_GlobalTable.HeartAttack_GameOver = true
                 do_heart_attack()
             else
                 printDebug("Heart attack did not trigger. Subtract 1.")
@@ -266,7 +267,7 @@ function HA_Table.roll_heart_attack_chance(overwrite)
             HA_Table.subtract_max_val()
         end
     end
-    HeartAttack_EventLock = false
+    HeartAttack_GlobalTable.HeartAttack_EventLock = false
 end
 
 --[[For every 5 seconds walked, decrease HeartAttack_MaxVal by that much. Reset all values to nil to save memory. If for
@@ -331,20 +332,20 @@ end
 
 --For every 24 hours passed, subtract x for hours passed from HeartAttack_MaxVal
 local function calculate_24_hours_passed()
-    if HeartAttack_24HoursStart ~= nil then
+    if HeartAttack_GlobalTable.HeartAttack_24HoursStart ~= nil then
         local end_time = time()
-        local hours_passed = end_time - HeartAttack_24HoursStart
+        local hours_passed = end_time - HeartAttack_GlobalTable.HeartAttack_24HoursStart
         if hours_passed >= 86400 then
             hours_passed = math.floor(hours_passed / 86400)
             if hours_passed >= 0 then
                 printDebug(hours_passed.." has passed since last check. Subtract "..hours_passed..".")
                 HA_Table.subtract_max_val(hours_passed)
-                HeartAttack_24HoursStart = end_time
+                HeartAttack_GlobalTable.HeartAttack_24HoursStart = end_time
             end
         end
     else
         printDebug("HeartAttack_24HoursStart was nil.")
-        HeartAttack_24HoursStart = time()
+        HeartAttack_GlobalTable.HeartAttack_24HoursStart = time()
     end
 end
 
@@ -352,23 +353,28 @@ end
 function HA_Table.handle_player_entering_world()
     initial_world_load = false
     if HeartAttack_FirstTimeDone == nil then
-        HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
-        HeartAttack_Debug = false                   -- Debug flag
-        HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
-        HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
-        HeartAttack_EndAtZero = false               -- Flag to check whether the user wants his odds printed
-        HeartAttack_MaxVal = HA_MaxVal              -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
-        HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
-        HeartAttack_24HoursStart = time()           -- Used for natural degradation of HeartAttack_MaxVal
+        HeartAttack_GlobalTable = {}
+        HeartAttack_GlobalTable.HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
+        HeartAttack_GlobalTable.HeartAttack_Debug = false                   -- Debug flag
+        HeartAttack_GlobalTable.HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
+        HeartAttack_GlobalTable.HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
+        HeartAttack_GlobalTable.HeartAttack_EndAtZero = false               -- Flag to check whether the user wants his odds printed
+        HeartAttack_GlobalTable.HeartAttack_MaxVal = HA_MaxVal              -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
+        HeartAttack_GlobalTable.HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
+        HeartAttack_GlobalTable.HeartAttack_24HoursStart = time()           -- Used for natural degradation of HeartAttack_MaxVal
         printInfo('First time? Type /hahelp for more information.')
     end
     --Every 10 minutes, trigger roll_heart_attack_chance to see if the player will experience a heart attack
     if not heart_attack_ticker then
-        if HeartAttack_GameOver == false then
+        if HeartAttack_GlobalTable.HeartAttack_GameOver == false then
             heart_attack_ticker = C_Timer.NewTicker(HA_Frequency, HA_Table.roll_heart_attack_chance)
         end
     end
     calculate_24_hours_passed()
+    if initial_game_load == false then
+        create_interface()
+        initial_game_load = true
+    end
     C_Timer.After(5, function() initial_world_load = true end) -- Set initial_world_load to false after initial load to stop BAG_UPDATE spam when logging into a character
 end
 
@@ -432,13 +438,13 @@ Multiply it by 1.15 and subtract HeartAttack_MaxVal by that much. Set HeartAttac
 HeartAttack_DeadTime was nil, just subtract HeartAttack_MaxVal by 20.]]
 function HA_Table.handle_player_alive()
     local revive_time = time()
-    if HeartAttack_DeadTime ~= nil then
-        local dead_time = HeartAttack_DeadTime
+    if HeartAttack_GlobalTable.HeartAttack_DeadTime ~= nil then
+        local dead_time = HeartAttack_GlobalTable.HeartAttack_DeadTime
         local time_dead = revive_time - dead_time
         local multiply = math.floor(time_dead * 1.15)
         printDebug("PLAYER_UNGHOST: Player was dead for "..time_dead.." seconds. Subtract "..multiply..".")
         HA_Table.subtract_max_val(multiply)
-        HeartAttack_DeadTime = nil
+        HeartAttack_GlobalTable.HeartAttack_DeadTime = nil
     else
         printDebug("PLAYER_UNGHOST: HeartAttack_DeadTime was nil. Subtract 20.")
         HA_Table.subtract_max_val(20)
@@ -447,8 +453,8 @@ end
 
 --If the player died, subtract HeartAttack_MaxVal by 10 and save current epoch seconds in case the player quits.
 function HA_Table.handle_player_dead()
-    HeartAttack_DeadTime = time()
-    printDebug("PLAYER_DEAD: Player died. Set HeartAttack_DeadTime to "..HeartAttack_DeadTime..". Subtract 10.")
+    HeartAttack_GlobalTable.HeartAttack_DeadTime = time()
+    printDebug("PLAYER_DEAD: Player died. Set HeartAttack_DeadTime to "..HeartAttack_GlobalTable.HeartAttack_DeadTime..". Subtract 10.")
     HA_Table.subtract_max_val(10)
 end
 
@@ -504,7 +510,7 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
     --Initial load of AddOn when player logs in
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
     --Handling of all events that cause HeartAttack_MaxVal to lower as well as counting of chat messages to use during randomizer
-    if HeartAttack_GameOver == false and HeartAttack_EventLock == false then
+    if HeartAttack_GlobalTable.HeartAttack_GameOver == false and HeartAttack_GlobalTable.HeartAttack_EventLock == false then
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving()
         elseif event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving()
         elseif event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg4, arg3)
