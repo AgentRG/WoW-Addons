@@ -510,7 +510,9 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
     --Initial load of AddOn when player logs in
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
     --Handling of all events that cause HeartAttack_MaxVal to lower as well as counting of chat messages to use during randomizer
-    if HeartAttack_GlobalTable.HeartAttack_GameOver == false and HeartAttack_GlobalTable.HeartAttack_EventLock == false then
+    if HeartAttack_GlobalTable.HeartAttack_GameOver ~= nil and
+            HeartAttack_GlobalTable.HeartAttack_GameOver == false and
+            HeartAttack_GlobalTable.HeartAttack_EventLock == false then
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving()
         elseif event == 'PLAYER_STOPPED_MOVING' then HA_Table.handle_player_stopped_moving()
         elseif event == 'UNIT_COMBAT' and arg1 == 'player' and arg2 == 'WOUND' then HA_Table.handle_unit_combat(arg4, arg3)
