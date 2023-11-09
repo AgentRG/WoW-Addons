@@ -67,7 +67,6 @@ IR_Table.InterruptSpellsSwitch = {
 }
 IR_Table.CCSpellsSwitch = {}
 IR_Table.CCActionBarSlot = {}
-IR_Table.DungeonBoss_Names = nil
 IR_Table.InitialLoadDone = false
 local f = CreateFrame('Frame', 'InterruptReminder')
 local playerClass = UnitClass('player')
@@ -255,22 +254,10 @@ function IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(slot)
 end
 
 
----Returns the dungeon ID or false (not a dungeon) depending on the player's current location in the world.
-function IR_Table.is_dungeon_instance()
-    local currentMapId = C_Map.GetBestMapForUnit("player")
-
-    if currentMapId then
-        local mapInfo = C_Map.GetMapInfo(currentMapId)
-
-        if mapInfo and (mapInfo.mapType == Enum.UIMapType.Dungeon or tContains(IR_Table.ZonesThatAreDungeons, currentMapId)) then
-            IR_Table.CurrentDungeonMapId = currentMapId
-        else
-            IR_Table.CurrentDungeonMapId = false
-        end
-        return
-    else
-        IR_Table.CurrentDungeonMapId = false
-    end
+---Returns whenever the player is currently in an instance or in open world
+local function is_in_instance()
+    local _, instanceType = GetInstanceInfo()
+    if instanceType ~= 'none' then return true else return false end
 end
 
 
@@ -278,45 +265,33 @@ end
 --- as either true or false depending on the circumstances. Since there is no actual API call to determine whether a
 --- target can be stunned, we need to make use of the information we do have access to. For example, units that have
 --- a frame around them more likely than not cannot be stunned. When in dungeons, this is troublesome since normal mobs
---- also have a frame around them. To get around that, we are reading IR_Table.DungeonBoss_Names to determine whether
---- the current target is a boss, and therefore cannot be stunned.
+--- also have a frame around them. To get around that, we are reading InterruptReminder_currentBossList to determine
+--- whether the current target is a boss, and therefore cannot be stunned.
 ---DEV NOTE: Although this works in most cases, even a giant drake in a dungeon that is not a boss will be tagged as
 --- stunnable - that cannot be reasonably kept track of without having a huge table of all units that have a non-public
 --- flag that makes them stun immune. Basically, if the non-boss minion seems too big to be stunned, it probably is.
 function IR_Table.is_target_a_boss()
+    local bosses = InterruptReminder_currentBossList
     --[[ There's a small bug here that I couldn't find a fix for. If the target switched to is nothing, it will still
          pull the target information from the previous target, even though GetUnitName should return nil at that point.
          Luckily, thin air cannot cast spells, so the rest of the addon will still function as intended. ]]
     if InterruptReminder_IsInit then
         local targetName = GetUnitName('target', false)
 
-        if targetName then
-            targetName = string.lower(targetName)
-        end
-
-        -- Safety measure to make sure current_dungeon_map_id is defined as either a valid dungeon id or false
-        if IR_Table.CurrentDungeonMapId == nil then
-            IR_Table.is_dungeon_instance()
-        end
-
-        -- Check to see if the user is currently in a dungeon
-        if IR_Table.CurrentDungeonMapId ~= false then
+        -- Check to see if the user is currently in an instance
+        if is_in_instance() == true then
 
             -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
-            if IR_Table.DungeonBoss_Names == nil then
+            if bosses == nil then
                 IR_Table.handle_zone_changed()
+                bosses = InterruptReminder_currentBossList
             end
 
-            -- If handle_zone_changed found that no bosses exist in the current zone, assume the target can be stunned
-            if next(IR_Table.DungeonBoss_Names) == 'empty' then
-                IR_Table.TargetCanBeStunned = true
+            -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
+            if tContains(bosses, targetName) then
+                IR_Table.TargetCanBeStunned = false
             else
-                -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
-                if tContains(IR_Table.DungeonBoss_Names, targetName) then
-                    IR_Table.TargetCanBeStunned = false
-                else
-                    IR_Table.TargetCanBeStunned = true
-                end
+                IR_Table.TargetCanBeStunned = true
             end
         else
             -- Otherwise, assume we're in the open world
@@ -523,6 +498,10 @@ function IR_Table.handle_player_entering_world()
         printInfo('First time loading the add-on? Type /irhelp for more options.')
     end
 
+    if InterruptReminder_currentBossList == nil then
+        InterruptReminder_currentBossList = {}
+    end
+
     -- Should execute only once during initial character login or /reload
     if IR_Table.InitialLoadDone == false then
 
@@ -620,29 +599,58 @@ function IR_Table.handle_player_changing_his_action_bar()
     end
 end
 
-
----Each time the player's zone changes, determine whether the player is currently in the dungeon. If the player is in
---- a dungeon, use C_EncounterJournal.GetEncountersOnMap to grab all the boss fights in the current zone. Each encounter
---- can have a maximum of 9 unit types present. Return 'empty' if the current zone has no bosses.
-function IR_Table.handle_zone_changed()
-    IR_Table.is_dungeon_instance()
-    IR_Table.DungeonBoss_Names = {}
-    if IR_Table.CurrentDungeonMapId ~= false then
-        local name
-        local dungeonBossIDs = C_EncounterJournal.GetEncountersOnMap(IR_Table.CurrentDungeonMapId) or {}
-        for _, encounter in pairs(dungeonBossIDs) do
+local function get_bosses()
+    local bestMapForPlayer = C_Map.GetBestMapForUnit('player')
+    if bestMapForPlayer ~= nil then
+        local encounters = C_EncounterJournal.GetEncountersOnMap(bestMapForPlayer) or {}
+        IR_Table.bossInserts = 0
+        for _, encounter in pairs(encounters) do
             for i = 1, 9 do
-                name = select(2, EJ_GetCreatureInfo(i, encounter.encounterID))
+                local name = select(2, EJ_GetCreatureInfo(i, encounter.encounterID))
                 if name then
-                    table.insert(IR_Table.DungeonBoss_Names, string.lower(name))
+                    InterruptReminder_currentBossList[#InterruptReminder_currentBossList + 1] = name
+                    IR_Table.bossInserts = IR_Table.bossInserts + 1
                 else
                     break
                 end
             end
         end
     end
-    if next(IR_Table.DungeonBoss_Names) == nil then
-        table.insert(IR_Table.DungeonBoss_Names, 'empty')
+end
+
+local function remove_boss_duplicates()
+    local currentBossListCopy = InterruptReminder_currentBossList
+    local hash = {}
+    local res = {}
+
+    for _, v in ipairs(currentBossListCopy) do
+        if (not hash[v]) then
+            res[#res + 1] = v
+            hash[v] = true
+        end
+    end
+    InterruptReminder_currentBossList = res
+end
+
+local function truncate_boss_list()
+    local inserts = IR_Table.bossInserts
+    if #InterruptReminder_currentBossList >= 50 then
+        for _ = 1, inserts do
+            table.remove(InterruptReminder_currentBossList, 1)
+        end
+    end
+end
+
+
+---Each time the player's zone changes, determine whether the player is currently in the dungeon. If the player is in
+--- a dungeon, use C_EncounterJournal.GetEncountersOnMap to grab all the boss fights in the current zone. Each encounter
+--- can have a maximum of 9 unit types present. Return 'empty' if the current zone has no bosses.
+function IR_Table.handle_zone_changed()
+    get_bosses()
+    remove_boss_duplicates()
+    truncate_boss_list()
+    for i,k in pairs(InterruptReminder_currentBossList) do
+        print(i, k)
     end
 end
 
