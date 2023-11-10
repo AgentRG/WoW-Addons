@@ -1,6 +1,4 @@
-SLASH_INTERRUPT_REMINDER_INIT1 = "/irinit"
 SLASH_INTERRUPT_REMINDER_PRINT1 = "/irprint"
-SLASH_INTERRUPT_REMINDER_DEL1 = "/irdel"
 SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
 SLASH_INTERRUPT_REMINDER_DEBUG1 = "/irdebug"
 
@@ -47,8 +45,6 @@ IR_Table.ExtraneousCCSpells = {
     'Crackling Jade Lightning' --[[Has a low chance to cause CC]], 'Restoral', 'Storm, Earth, and Fire'
 }
 
-IR_Table.ZonesThatAreDungeons = {1010 --[[The MOTHERLODE!!]]}
-
 --Dedicated interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary effect)
 IR_Table.InterruptSpellsSwitch = {
     ['Death Knight'] = {'Mind Freeze', 'Asphyxiate', 'Strangulate', 'Death Grip'},
@@ -68,6 +64,7 @@ IR_Table.InterruptSpellsSwitch = {
 IR_Table.CCSpellsSwitch = {}
 IR_Table.CCActionBarSlot = {}
 IR_Table.InitialLoadDone = false
+IR_Table.InitialGameLoad = false
 local f = CreateFrame('Frame', 'InterruptReminder')
 local playerClass = UnitClass('player')
 
@@ -92,9 +89,8 @@ local GetTime = GetTime
 local C_Timer = C_Timer
 local C_EncounterJournal = C_EncounterJournal
 local EJ_GetCreatureInfo = EJ_GetCreatureInfo
-local UnitCanAttack =UnitCanAttack
+local UnitCanAttack = UnitCanAttack
 local C_Map = C_Map
-local Enum = Enum
 
 -- Local version of Lua global functions for slightly faster runtime access
 local string = string
@@ -108,6 +104,45 @@ local next = next
 local function printInfo(text) print("|cff00ffffInfo (InterruptReminder): |cffffffff"..text) end
 local function printWarning(text) print("|cffffff00Warning (InterruptReminder): |cffffffff"..text) end
 
+---Options frame
+local function CreateInterface()
+    local panel = CreateFrame("Frame", "InterruptReminderSettings")
+    panel.name = "Interrupt Reminder"
+
+    local advancedMode = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
+    advancedMode.Text:SetText("Enable Crowd Control Spells Highlight")
+    advancedMode:SetPoint("TOPLEFT", 8, -10)
+    advancedMode.tooltip = "Enables highlighting of Crowd Control spells."
+    if InterruptReminder_IsInit == true then
+        advancedMode:SetChecked(true)
+    else
+        advancedMode:SetChecked(false)
+    end
+    advancedMode:SetScript("OnClick", function()
+        local checkStatus = advancedMode:GetChecked()
+        if checkStatus == true then
+            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
+            IR_Table.generate_cc_spells_table_from_spellbook()
+            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
+            local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
+            IR_Table.CCActionBarTable = i
+            IR_Table.CCActionBarSlot = c
+            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+            end
+            for _, value in ipairs(IR_Table.ClassCCSpell) do
+                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
+            end
+            InterruptReminder_IsInit = true
+        else
+            IR_Table.CCSpellsSwitch = {}
+            IR_Table.TargetCanBeStunned = false
+            InterruptReminder_IsInit = false
+        end
+    end)
+
+    InterfaceOptions_AddCategory(panel, true)
+end
 
 ---Slash command to print the contents of IR_Table excluding functions and static content. Used for debugging.
 SlashCmdList.INTERRUPT_REMINDER_DEBUG = function()
@@ -126,34 +161,9 @@ SlashCmdList.INTERRUPT_REMINDER_DEBUG = function()
 end
 
 
----Slash command that will initialize tracking of Crowd Control spells
-SlashCmdList.INTERRUPT_REMINDER_INIT = function()
-    if InterruptReminder_IsInit == false then
-        IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-        IR_Table.generate_cc_spells_table_from_spellbook()
-        IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-        local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-        IR_Table.CCActionBarTable = i
-        IR_Table.CCActionBarSlot = c
-        for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-            table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-        end
-        for _, value in ipairs(IR_Table.ClassCCSpell) do
-            table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-        end
-        InterruptReminder_IsInit = true
-        printInfo("Interrupt Reminder Crowd Control has initialized. To view saved Crowd Control spells, use /irprint. To opt-out, use /irdel.")
-    else
-        printWarning("Interrupt Reminder Crowd Control was already initialized. To view saved Crowd Control and Interrupt spells, use /irprint. To opt-out, use /irdel")
-    end
-end
-
-
 ---Slash command to print all slash commands
 SlashCmdList.INTERRUPT_REMINDER_HELP = function()
-    print("/irinit: Opt-in for additional tracking of your class' Crowd Control spells.")
     print("/irprint: Print all currently tracked Crowd Control spells as well as the class interrupt spell.")
-    print("/irdel: Opt-out of the additional tracking and revert back to only tracking the class interrupt.")
     print("/irdebug: Print all currently stored content inside the add-on's local table (except for static variables)")
 end
 
@@ -174,15 +184,6 @@ SlashCmdList.INTERRUPT_REMINDER_PRINT = function()
             end
         end
     end
-end
-
-
----Slash command to disable Crowd Control spell tracking. Add-on will revert to interrupt only functionality.
-SlashCmdList.INTERRUPT_REMINDER_DEL = function()
-    IR_Table.CCSpellsSwitch = {}
-    IR_Table.TargetCanBeStunned = false
-    InterruptReminder_IsInit = false
-    printInfo("Saved Crowd Control spells have been cleared from addon.")
 end
 
 
@@ -552,8 +553,10 @@ function IR_Table.handle_player_entering_world()
         end)
     end
 
-    if InterruptReminder_IsInit then
-        IR_Table.handle_zone_changed()
+    -- Load the settings interface
+    if IR_Table.InitialGameLoad == false then
+        CreateInterface()
+        IR_Table.InitialGameLoad = true
     end
 end
 
@@ -649,9 +652,6 @@ function IR_Table.handle_zone_changed()
     get_bosses()
     remove_boss_duplicates()
     truncate_boss_list()
-    for i,k in pairs(InterruptReminder_currentBossList) do
-        print(i, k)
-    end
 end
 
 
