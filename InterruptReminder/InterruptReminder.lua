@@ -1,22 +1,22 @@
-SLASH_INTERRUPT_REMINDER_PRINT1 = "/irprint"
 SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
-SLASH_INTERRUPT_REMINDER_DEBUG1 = "/irdebug"
 
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {}
 
 -- WoW default action bar names
-IR_Table.ActionBars = {'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft', 'MultiBar7', 'MultiBar6', 'MultiBar5'}
+IR_Table.ActionBars = {'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft',
+                       'MultiBar7', 'MultiBar6', 'MultiBar5'}
 
 --All keywords that are found in varying Crowd Control spells
-IR_Table.CrownControlTypes = {'knock', 'control', 'confuse', 'fear', 'flee', 'stun', 'incapacit', 'intimidat', 'sleep', 'disorient', 'horr', 'silenc'}
+IR_Table.CrownControlTypes = {'knock', 'control', 'confuse', 'fear', 'flee', 'stun', 'interrupt', 'incapacit',
+                              'intimidat', 'sleep', 'disorient', 'horr', 'silenc'}
 
---Spells that will get picked up by generate_cc_spells_table_from_spellbook() because they contain a keyword from CrownControlTypes that we do not want to be added to the list
+--Spells that will get picked up by IR_Table.get_all_crowd_control_spells() because they contain a keyword from CrownControlTypes that we do not want to be added to the list
 IR_Table.ExtraneousCCSpells = {
     --Evoker
     'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons',
     --Warlock
-    'Axe Toss' --[[Interrupt spell]], 'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard',
+    'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard',
     --Humans
     'Will to Survive',
     --Warrior
@@ -38,15 +38,14 @@ IR_Table.ExtraneousCCSpells = {
     --Undead
     'Will of the Forsaken',
     --Paladin
-    'Divine Shield', 'Divine Protection', "Justicar's Vengeance", 'Wakes of Ashes' --[[Works on only Demons/Undead]], "Avenger's Shield" --[[Interrupt spell]],
+    'Divine Shield', 'Divine Protection', "Justicar's Vengeance",
     --Shaman
-    'Flame Shock' --[[CC happens when affect is dispelled]], 'Earthquake' --[[Only 5% chance to cause a CC]],
     --Monk
-    'Crackling Jade Lightning' --[[Has a low chance to cause CC]], 'Restoral', 'Storm, Earth, and Fire'
+    'Restoral', 'Storm, Earth, and Fire'
 }
 
---Dedicated interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary effect)
-IR_Table.InterruptSpellsSwitch = {
+--Default interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary effect)
+IR_Table.InterruptSpells = {
     ['Death Knight'] = {'Mind Freeze', 'Asphyxiate', 'Strangulate', 'Death Grip'},
     ['Demon Hunter'] = {'Disrupt'},
     ['Druid'] = {'Skull Bash', 'Solar Beam'},
@@ -61,10 +60,8 @@ IR_Table.InterruptSpellsSwitch = {
     ['Warlock'] = {'Spell Lock', 'Optical Blast', 'Axe Toss'},
     ['Warrior'] = {'Pummel'}
 }
-IR_Table.CCSpellsSwitch = {}
-IR_Table.CCActionBarSlot = {}
 IR_Table.InitialLoadDone = false
-IR_Table.InitialGameLoad = false
+
 local f = CreateFrame('Frame', 'InterruptReminder')
 local playerClass = UnitClass('player')
 
@@ -91,6 +88,9 @@ local C_EncounterJournal = C_EncounterJournal
 local EJ_GetCreatureInfo = EJ_GetCreatureInfo
 local UnitCanAttack = UnitCanAttack
 local C_Map = C_Map
+local C_ClassTalents = C_ClassTalents
+local C_Traits = C_Traits
+local GetInstanceInfo = GetInstanceInfo
 
 -- Local version of Lua global functions for slightly faster runtime access
 local string = string
@@ -99,7 +99,6 @@ local ipairs = ipairs
 local pairs = pairs
 local select = select
 local print = print
-local next = next
 
 local function printInfo(text) print("|cff00ffffInfo (InterruptReminder): |cffffffff"..text) end
 local function printWarning(text) print("|cffffff00Warning (InterruptReminder): |cffffffff"..text) end
@@ -110,95 +109,116 @@ local function CreateInterface()
     panel.name = "Interrupt Reminder"
 
     local advancedMode = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
-    advancedMode.Text:SetText("Enable Crowd Control Spells Highlight")
+    advancedMode.Text:SetText("Enable Advanced Options")
     advancedMode:SetPoint("TOPLEFT", 8, -10)
-    advancedMode.tooltip = "Enables highlighting of Crowd Control spells."
-    if InterruptReminder_IsInit == true then
+    advancedMode.tooltip = "Brings up a list of checkboxes for the user to select from for individual spells that the"..
+            " user would like to see highlighted."
+    if InterruptReminder_Table.IsInit == true then
         advancedMode:SetChecked(true)
     else
         advancedMode:SetChecked(false)
     end
+    local horizontal_line = panel:CreateLine()
+    horizontal_line:SetColorTexture(1, 1, 1, 0.5)
+    horizontal_line:SetThickness(1)
+    horizontal_line:SetStartPoint("TOPLEFT", 12, -40)
+    horizontal_line:SetEndPoint("TOPRIGHT", -12, -40)
     advancedMode:SetScript("OnClick", function()
         local checkStatus = advancedMode:GetChecked()
         if checkStatus == true then
-            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-            IR_Table.generate_cc_spells_table_from_spellbook()
-            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-            local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-            IR_Table.CCActionBarTable = i
-            IR_Table.CCActionBarSlot = c
-            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-            end
-            for _, value in ipairs(IR_Table.ClassCCSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-            end
-            InterruptReminder_IsInit = true
+            InterruptReminder_Table.IsInit = true
+            IR_Table.get_all_crowd_control_spells()
+            InterruptReminder_Table.ActionBarTable, InterruptReminder_Table.ActionBarSlot = IR_Table.find_all_interrupt_spell(InterruptReminder_Table.spells)
         else
-            IR_Table.CCSpellsSwitch = {}
+            InterruptReminder_Table.IsInit = false
+            InterruptReminder_Table.spells = IR_Table.InterruptSpells[playerClass]
+            InterruptReminder_Table.ActionBarTable, InterruptReminder_Table.ActionBarSlot = IR_Table.find_all_interrupt_spell(InterruptReminder_Table.spells)
             IR_Table.TargetCanBeStunned = false
-            InterruptReminder_IsInit = false
         end
     end)
-
     InterfaceOptions_AddCategory(panel, true)
 end
 
----Slash command to print the contents of IR_Table excluding functions and static content. Used for debugging.
-SlashCmdList.INTERRUPT_REMINDER_DEBUG = function()
-    for j, k in pairs(IR_Table) do
-        if type(k) ~= "function" and j ~= 'InterruptSpellsSwitch' and j ~= 'ActionBars' and j ~= 'CrownControlTypes' and j ~= 'ExtraneousCCSpells' then
-            if type(k) == "table" then
-                print(j, '(Table)')
-                for o, p in pairs(k) do
-                    print(' '..o, p)
-                end
-            else
-                print(j, k)
-            end
-        end
-    end
-end
-
-
----Slash command to print all slash commands
+---Slash command for information help.
 SlashCmdList.INTERRUPT_REMINDER_HELP = function()
-    print("/irprint: Print all currently tracked Crowd Control spells as well as the class interrupt spell.")
-    print("/irdebug: Print all currently stored content inside the add-on's local table (except for static variables)")
+
 end
 
+---Remove duplicates in a table and return the table
+local function remove_duplicates(table)
+    local currentCopy = table
+    local hash = {}
+    local res = {}
 
----Slash command to print all found Crowd Control spells as well as the interrupt spells. Will work only if /irinit ran.
-SlashCmdList.INTERRUPT_REMINDER_PRINT = function()
-    if next(IR_Table.CCSpellsSwitch) == nil then
-        printWarning("Saved Crowd Control spells were not found. Maybe /irinit was not yet run?")
-    else
-        local ccTable = IR_Table.CCSpellsSwitch[playerClass]
-        if ccTable then
-            print('Class: ' .. playerClass)
-            for _, spell in ipairs(ccTable) do
-                print('  '..spell)
-            end
-            for _, spellName in ipairs(IR_Table.ClassInterruptSpell) do
-                print('  '..spellName)
+    for _, v in pairs(currentCopy) do
+        if (not hash[v]) then
+            res[#res + 1] = v
+            hash[v] = true
+        end
+    end
+    table = res
+    return table
+end
+
+local function merge_two_tables(table_one, table_two)
+    for i = 1, #table_two do
+        table_one[#table_one + 1] = table_two[i]
+    end
+    return table_one
+end
+
+local function get_specialization_spells()
+    local spellIDs = {}
+    local list = {}
+
+    local configID = C_ClassTalents.GetActiveConfigID()
+    if configID == nil then return end
+
+    local configInfo = C_Traits.GetConfigInfo(configID)
+    if configInfo == nil then return end
+
+    for _, treeID in ipairs(configInfo.treeIDs) do -- in the context of talent trees, there is only 1 treeID
+        local nodes = C_Traits.GetTreeNodes(treeID)
+        for _, nodeID in ipairs(nodes) do
+            local nodeInfo = C_Traits.GetNodeInfo(configID, nodeID)
+            for _, entryID in ipairs(nodeInfo.entryIDs) do -- each node can have multiple entries (e.g. choice nodes have 2)
+                local entryInfo = C_Traits.GetEntryInfo(configID, entryID)
+                if entryInfo and entryInfo.definitionID then
+                    local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+                    if definitionInfo.spellID then
+                        table.insert(spellIDs, definitionInfo.spellID)
+                    end
+                end
             end
         end
     end
+    for _, spellId in ipairs(spellIDs) do
+        local spell = Spell:CreateFromSpellID(spellId)
+        local spellName = spell:GetSpellName()
+        if spellName and not tContains(IR_Table.ExtraneousCCSpells, spellName) then
+            local spell = Spell:CreateFromSpellID(spellId)
+
+            if spell:IsSpellEmpty() == false then
+                spell:ContinueOnSpellLoad(function()
+                    local desc = string.lower(spell:GetSpellDescription())
+
+                    for _, cc in pairs(IR_Table.CrownControlTypes) do
+                        if string.find(desc, cc, 1, true) then
+                            table.insert(list, spellName)
+                            break
+                        end
+                    end
+                end)
+            end
+        end
+    end
+    return list
 end
 
-
----Reads the player's spellbook and grabs all spells capable of causing a Crowd Control (CC) effect to interrupt a spell.
---- Will filter out false positive spells that contain CC keywords like "cleanse a stun". This function can run only after
---- WoW has finished loading the UI. Otherwise, Spell object will be returned as nil.
-function IR_Table.generate_cc_spells_table_from_spellbook()
-    -- Initialize the table that will store the spells under the player class hash key
-    IR_Table.CCSpellsSwitch = {[playerClass] = {}}
-    -- Get the total number of tabs under the spellbook
+local function get_spellbook_spells()
+    local list = {}
     local numSpellTabs = GetNumSpellTabs()
 
-    -- For each spellbook tab, iterate through all spells, create a Spell object, and get the description of the spell.
-    -- If the spell contains a CC keyword and is not a false positive from IR_Table.ExtraneousCCSpells, add it to the
-    -- CCSpellsSwitch table.
     for tabIndex = 1, numSpellTabs do
         local _, _, offset, numSpells = GetSpellTabInfo(tabIndex)
 
@@ -214,7 +234,7 @@ function IR_Table.generate_cc_spells_table_from_spellbook()
 
                         for _, cc in pairs(IR_Table.CrownControlTypes) do
                             if string.find(desc, cc, 1, true) then
-                                table.insert(IR_Table.CCSpellsSwitch[playerClass], spellName)
+                                table.insert(list, spellName)
                                 break
                             end
                         end
@@ -223,37 +243,17 @@ function IR_Table.generate_cc_spells_table_from_spellbook()
             end
         end
     end
+    return list
 end
 
-
----Used when event ACTIONBAR_SLOT_CHANGED is triggered. Checks if that event triggered for a Crowd Control or one of
---- the interrupt spells. Returns true/false. Without this, the event is triggered for any spell that is updated in the
---- action bars.
-function IR_Table.is_actionbar_slot_changed_on_interrupt_or_cc_spell(slot)
-    if IR_Table.InitialLoadDone then
-        local action_bar_slots = {}
-
-        if InterruptReminder_IsInit then
-            for _, value in ipairs(IR_Table.InterruptActionBarSlot) do
-                table.insert(action_bar_slots, value)
-            end
-            for _, value in ipairs(IR_Table.CCActionBarSlot) do
-                table.insert(action_bar_slots, value)
-            end
-        else
-            for _, value in ipairs(IR_Table.InterruptActionBarSlot) do
-                table.insert(action_bar_slots, value)
-            end
-        end
-
-        if next(action_bar_slots) ~= nil and tContains(action_bar_slots, slot) then
-            return true
-        else
-            return false
-        end
-    end
+function IR_Table.get_all_crowd_control_spells()
+    InterruptReminder_Table.spells = {}
+    local copy = {}
+    copy = get_spellbook_spells()
+    copy = merge_two_tables(copy, get_specialization_spells())
+    copy = remove_duplicates(copy)
+    InterruptReminder_Table.spells = copy
 end
-
 
 ---Returns whenever the player is currently in an instance or in open world
 local function is_in_instance()
@@ -261,22 +261,21 @@ local function is_in_instance()
     if instanceType ~= 'none' then return true else return false end
 end
 
-
 ---Algorithm that determines whether the currently selected target is a boss and reassigns IR_Table.TargetCanBeStunned
 --- as either true or false depending on the circumstances. Since there is no actual API call to determine whether a
 --- target can be stunned, we need to make use of the information we do have access to. For example, units that have
 --- a frame around them more likely than not cannot be stunned. When in dungeons, this is troublesome since normal mobs
---- also have a frame around them. To get around that, we are reading InterruptReminder_currentBossList to determine
---- whether the current target is a boss, and therefore cannot be stunned.
----DEV NOTE: Although this works in most cases, even a giant drake in a dungeon that is not a boss will be tagged as
+--- also have a frame around them. To get around that, we are reading InterruptReminder_Table.currentBossList to determine
+--- whether the current target is a boss or a minion of a boss in that dungeon, and therefore cannot be stunned.
+---DEV NOTE: Although this works in most cases, a giant drake in a raid that is not a boss will be tagged as
 --- stunnable - that cannot be reasonably kept track of without having a huge table of all units that have a non-public
 --- flag that makes them stun immune. Basically, if the non-boss minion seems too big to be stunned, it probably is.
 function IR_Table.is_target_a_boss()
-    local bosses = InterruptReminder_currentBossList
+    local bosses = InterruptReminder_Table.currentBossList
     --[[ There's a small bug here that I couldn't find a fix for. If the target switched to is nothing, it will still
          pull the target information from the previous target, even though GetUnitName should return nil at that point.
          Luckily, thin air cannot cast spells, so the rest of the addon will still function as intended. ]]
-    if InterruptReminder_IsInit then
+    if InterruptReminder_Table.IsInit then
         local targetName = GetUnitName('target', false)
 
         -- Check to see if the user is currently in an instance
@@ -285,7 +284,7 @@ function IR_Table.is_target_a_boss()
             -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
             if bosses == nil then
                 IR_Table.handle_zone_changed()
-                bosses = InterruptReminder_currentBossList
+                bosses = InterruptReminder_Table.currentBossList
             end
 
             -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
@@ -347,11 +346,17 @@ end
 ---Returns:
 --- readyToCast (table): A table of spells ready to be cast.
 --- stillOnCooldown (table): A table of spells still on cooldown.
-function IR_Table.get_spell_cooldowns(spells_table)
+function IR_Table.get_spell_cooldowns(spells_table, interrupt_only)
+    interrupt_only = interrupt_only or false
+
+    if interrupt_only == true then
+        spells_table = IR_Table.InterruptSpells[playerClass]
+    end
+
     local readyToCast = {}
     local stillOnCooldown = {}
 
-    ---Same as InterruptReminder_find_all_interrupt_spell, but for a single spell. Used when the callback handler is called
+    ---Same as IR_Table.find_all_interrupt_spell, but for a single spell. Used when the callback handler is called
     --- in case a spell was on cooldown.
     local function find_interrupt_spell(spell)
         for _, barName in ipairs(IR_Table.ActionBars) do
@@ -428,13 +433,8 @@ end
 
 ---Handles the unhighlight of spells.
 function IR_Table.handle_target_stopped_casting()
-    for _, location in ipairs(IR_Table.InterruptActionBarTable) do
+    for _, location in ipairs(InterruptReminder_Table.ActionBarTable) do
         LibButtonGlow.HideOverlayGlow(location)
-    end
-    if InterruptReminder_IsInit then
-        for _, location in ipairs(IR_Table.CCActionBarTable) do
-            LibButtonGlow.HideOverlayGlow(location)
-        end
     end
 end
 
@@ -448,13 +448,14 @@ function IR_Table.handle_current_target_spell_casting()
 
     IR_Table.is_target_casting_interruptible_spell()
 
+    local spells = InterruptReminder_Table.spells
+
     if IR_Table.IsInterruptible == true and IR_Table.CurrentTargetCanBeAttacked == true then
-        if IR_Table.TargetCanBeStunned then -- Can be true only when Crowd Control spell tracking is enabled
-            local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned)
+        if IR_Table.TargetCanBeStunned == true then -- Can be true only when Crowd Control spell tracking is enabled
+            local readyToCast, stillOnCooldown = IR_Table.get_spell_cooldowns(spells, false)
             for i = 1, #readyToCast do
                 LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
             end
-            local stillOnCooldown = select(2, IR_Table.get_spell_cooldowns(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned))
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
                     IR_Table.is_target_casting_interruptible_spell()
@@ -464,11 +465,10 @@ function IR_Table.handle_current_target_spell_casting()
                 end)
             end
         else
-            local readyToCast = IR_Table.get_spell_cooldowns(IR_Table.ClassInterruptSpell)
+            local readyToCast, stillOnCooldown = IR_Table.get_spell_cooldowns(spells, true)
             for i = 1, #readyToCast do
                 LibButtonGlow.ShowOverlayGlow(readyToCast[i].location)
             end
-            local stillOnCooldown = select(2, IR_Table.get_spell_cooldowns(IR_Table.ClassInterruptSpell))
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
                     IR_Table.is_target_casting_interruptible_spell()
@@ -482,69 +482,25 @@ function IR_Table.handle_current_target_spell_casting()
 end
 
 
----Handles the logic for when the enter players the world (initial login or /reload).
+---Handles the logic for when the enter players the world (initial login, /reload, or instance load).
 function IR_Table.handle_player_entering_world()
-
-    -- Initial values for interruptReminder_Table
-    IR_Table.AlreadyWarned = false
-    IR_Table.EndTime = nil
-    IR_Table.StartTime = nil
-    IR_Table.IsInterruptible = false
-    IR_Table.TargetCanBeStunned = false
-    IR_Table.CurrentTargetCanBeAttacked = false
-
-    -- This should execute only once in addon's lifetime.
-    if InterruptReminder_FirstLaunch == nil then
-        InterruptReminder_FirstLaunch = true
-        printInfo('First time loading the add-on? Type /irhelp for more options.')
-    end
-
-    if InterruptReminder_currentBossList == nil then
-        InterruptReminder_currentBossList = {}
-    end
 
     -- Should execute only once during initial character login or /reload
     if IR_Table.InitialLoadDone == false then
 
-        -- Grab the player's interrupt spells based on playerClass and the makeshift switch
-        IR_Table.ClassInterruptSpell = IR_Table.InterruptSpellsSwitch[playerClass]
-
-        -- Find the location of those spells on the action bars
-        local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
-        IR_Table.InterruptActionBarTable = j
-        IR_Table.InterruptActionBarSlot = k
-
         -- If InterruptReminder_IsInit is undefined, set it to false
-        if InterruptReminder_IsInit == nil then
-            InterruptReminder_IsInit = false
+        if InterruptReminder_Table.IsInit == nil then
+            InterruptReminder_Table.IsInit = false
+            -- Find the location of those spells on the action bars
+            InterruptReminder_Table.ActionBarTable, InterruptReminder_Table.ActionBarSlot = IR_Table.find_all_interrupt_spell(InterruptReminder_Table.spells)
         -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
-        elseif InterruptReminder_IsInit == true then
+        elseif InterruptReminder_Table.IsInit == true then
             --[[Timer usage required because part of WoW's API is unavailable during initial character login. Timer will
             execute once the game is in a playable state]]
             C_Timer.After(1, function()
-                IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-                IR_Table.generate_cc_spells_table_from_spellbook()
-                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-                local i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-                IR_Table.CCActionBarTable = i
-                IR_Table.CCActionBarSlot = c
-                for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
-                for _, value in ipairs(IR_Table.ClassCCSpell) do
-                    table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-                end
+                -- Find the location of those spells on the action bars
+                InterruptReminder_Table.ActionBarTable, InterruptReminder_Table.ActionBarSlot = IR_Table.find_all_interrupt_spell(InterruptReminder_Table.spells)
             end)
-        end
-
-        -- Check if the action bars do not contain any interrupt spell, in which case a warning will be thrown
-        if next(IR_Table.InterruptActionBarTable) == nil then
-            local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
-            printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
-            if playerClass == 'Warlock' then
-                printInfo("Detected that player class is " .. playerClass .. ". Please move the interrupt ability to one of the action bars (not pet action bar) for AddOn to function correctly.")
-            end
-            IR_Table.AlreadyWarned = true
         end
 
         -- ACTIONBAR_SLOT_CHANGED is triggered during login, so calling the handler function here to avoid nil scenarios
@@ -552,56 +508,18 @@ function IR_Table.handle_player_entering_world()
             IR_Table.InitialLoadDone = true
         end)
     end
-
-    -- Load the settings interface
-    if IR_Table.InitialGameLoad == false then
-        CreateInterface()
-        IR_Table.InitialGameLoad = true
-    end
 end
 
 
 ---Handles the logic for when the player updates his action bar. Just checks to make sure he has at least one interrupt
 --- available in his action bars and updated their locations.
 function IR_Table.handle_player_changing_his_action_bar()
-    if IR_Table.InitialLoadDone then
-        local i, c
-        -- Find the location of those spells on the action bars
-        if IR_Table.ClassInterruptSpell == nil then IR_Table.ClassInterruptSpell = IR_Table.InterruptSpellsSwitch[playerClass] end
-        local j, k = IR_Table.find_all_interrupt_spell(IR_Table.ClassInterruptSpell)
-        if InterruptReminder_IsInit then
-            if IR_Table.ClassCCSpell == nil then
-                IR_Table.generate_cc_spells_table_from_spellbook()
-                IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-            end
-            i, c = IR_Table.find_all_interrupt_spell(IR_Table.ClassCCSpell)
-        end
-        IR_Table.InterruptActionBarTable = j
-        IR_Table.InterruptActionBarSlot = k
-
-        -- If InterruptReminder_IsInit is true, grab all the spells that can CC and find their locations on the action bar
-        if InterruptReminder_IsInit == true then
-            IR_Table.CombinedSpellTableForTargetsThatCanBeStunned = {}
-            IR_Table.generate_cc_spells_table_from_spellbook()
-            IR_Table.ClassCCSpell = IR_Table.CCSpellsSwitch[playerClass]
-            IR_Table.CCActionBarTable = i
-            IR_Table.CCActionBarSlot = c
-            for _, value in ipairs(IR_Table.ClassInterruptSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-            end
-            for _, value in ipairs(IR_Table.ClassCCSpell) do
-                table.insert(IR_Table.CombinedSpellTableForTargetsThatCanBeStunned, value)
-            end
-        end
-
-        if next(IR_Table.InterruptActionBarTable) == nil and not IR_Table.AlreadyWarned then
-            local tableConcat = table.concat(IR_Table.ClassInterruptSpell, ", ")
-            printWarning("Interrupting spell(s) |" .. tableConcat .. "| not found in the action bar. Please move one to an action bar.")
-            IR_Table.AlreadyWarned = true
-        end
+    if IR_Table.InitialLoadDone == true then
+        InterruptReminder_Table.ActionBarTable, InterruptReminder_Table.ActionBarSlot = IR_Table.find_all_interrupt_spell(InterruptReminder_Table.spells)
     end
 end
 
+---Read the encounter journal for the zone and grab all bosses + boss minions for that zone
 local function get_bosses()
     local bestMapForPlayer = C_Map.GetBestMapForUnit('player')
     if bestMapForPlayer ~= nil then
@@ -611,7 +529,7 @@ local function get_bosses()
             for i = 1, 9 do
                 local name = select(2, EJ_GetCreatureInfo(i, encounter.encounterID))
                 if name then
-                    InterruptReminder_currentBossList[#InterruptReminder_currentBossList + 1] = name
+                    InterruptReminder_Table.currentBossList[#InterruptReminder_Table.currentBossList + 1] = name
                     IR_Table.bossInserts = IR_Table.bossInserts + 1
                 else
                     break
@@ -621,25 +539,12 @@ local function get_bosses()
     end
 end
 
-local function remove_boss_duplicates()
-    local currentBossListCopy = InterruptReminder_currentBossList
-    local hash = {}
-    local res = {}
-
-    for _, v in ipairs(currentBossListCopy) do
-        if (not hash[v]) then
-            res[#res + 1] = v
-            hash[v] = true
-        end
-    end
-    InterruptReminder_currentBossList = res
-end
-
+---Keep the boss list at the capacity of 30
 local function truncate_boss_list()
     local inserts = IR_Table.bossInserts
-    if #InterruptReminder_currentBossList >= 50 then
+    if #InterruptReminder_Table.currentBossList >= 30 then
         for _ = 1, inserts do
-            table.remove(InterruptReminder_currentBossList, 1)
+            table.remove(InterruptReminder_Table.currentBossList, 1)
         end
     end
 end
@@ -650,7 +555,7 @@ end
 --- can have a maximum of 9 unit types present. Return 'empty' if the current zone has no bosses.
 function IR_Table.handle_zone_changed()
     get_bosses()
-    remove_boss_duplicates()
+    InterruptReminder_Table.currentBossList = remove_duplicates(InterruptReminder_Table.currentBossList)
     truncate_boss_list()
 end
 
@@ -674,14 +579,37 @@ function IR_Table.handle_player_switching_targets()
     end
 end
 
+---Handles the logic for when the player initially logs in or does a /reload
+function IR_Table.handle_player_login()
+    -- Initial values for IR_Table
+    IR_Table.EndTime = nil
+    IR_Table.StartTime = nil
+    IR_Table.IsInterruptible = false
+    IR_Table.TargetCanBeStunned = false
+    IR_Table.CurrentTargetCanBeAttacked = false
+
+    if InterruptReminder_FirstLaunch == nil then
+        InterruptReminder_FirstLaunch = true
+        printInfo('First time loading the add-on? Type /irhelp for more information.')
+    end
+
+    if InterruptReminder_Table == nil then
+        InterruptReminder_Table = {}
+        InterruptReminder_Table.spells = IR_Table.InterruptSpells[playerClass]
+    end
+
+    CreateInterface()
+end
+
 
 function f:OnEvent(event, ...)
-    if event == 'PLAYER_ENTERING_WORLD' then IR_Table.handle_player_entering_world() end
-    if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then IR_Table.handle_current_target_spell_casting() end
-    if (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then IR_Table.handle_target_stopped_casting() end
-    if event == 'PLAYER_TARGET_CHANGED' then IR_Table.handle_player_switching_targets() end
-    if event == 'ACTIONBAR_SLOT_CHANGED' then IR_Table.handle_player_changing_his_action_bar() end
-    if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') and InterruptReminder_IsInit then IR_Table.handle_zone_changed() end
+    if event == 'PLAYER_ENTERING_WORLD' then IR_Table.handle_player_entering_world()
+    elseif (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then IR_Table.handle_current_target_spell_casting()
+    elseif (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then IR_Table.handle_target_stopped_casting()
+    elseif event == 'PLAYER_TARGET_CHANGED' then IR_Table.handle_player_switching_targets()
+    elseif event == 'ACTIONBAR_SLOT_CHANGED' then IR_Table.handle_player_changing_his_action_bar()
+    elseif event == 'PLAYER_LOGIN' then IR_Table.handle_player_login()
+    elseif (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') and InterruptReminder_Table.IsInit == true then IR_Table.handle_zone_changed() end
 end
 
 
@@ -696,4 +624,5 @@ f:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
+f:RegisterEvent('PLAYER_LOGIN')
 f:SetScript('OnEvent', f.OnEvent)
