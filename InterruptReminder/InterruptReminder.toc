@@ -4,6 +4,8 @@
 ## Author: AgentRG
 ## OptionalDeps: LibButtonGlow-1.0
 ## SavedVariablesPerCharacter: InterruptReminder_Table, InterruptReminder_FirstLaunch
+## IconTexture: Interface\AddOns\InterruptReminder\Resources\icon.png
+## AddonCompartmentFunc: InterruptReminder_OnAddonCompartmentClick
 
 Libs\LibButtonGlow-1.0\LibStub\LibStub.lua
 Libs\LibButtonGlow-1.0\LibButtonGlow-1.0.lua
