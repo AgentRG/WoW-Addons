@@ -52,7 +52,7 @@ local IR_Table = {
         ['Evoker'] = { 'Quell' },
         ['Hunter'] = { 'Counter Shot', 'Muzzle' },
         ['Mage'] = { 'Counterspell' },
-        ['Monk'] = { 'Spear Hand Strike' },
+        ['Monk'] = { 'Spear Hand Strike', 'Quaking Palm' },
         ['Paladin'] = { 'Rebuke', "Avenger's Shield" },
         ['Priest'] = { 'Silence' },
         ['Rogue'] = { 'Kick' },
@@ -268,7 +268,7 @@ end
 
 ---Read the encounter journal for the zone and grab all bosses + boss minions for that zone
 local function get_bosses()
-    local copy = InterruptReminder_Table.currentBossList
+    local copy = InterruptReminder_Table.CurrentBossList
     local bestMapForPlayer = C_Map.GetBestMapForUnit('player')
     if bestMapForPlayer ~= nil then
         local encounters = C_EncounterJournal.GetEncountersOnMap(bestMapForPlayer) or {}
@@ -286,12 +286,12 @@ local function get_bosses()
         end
     end
     printDebug("get_bosses: Boss list now consists of: " .. table.concat(copy, ","))
-    InterruptReminder_Table.currentBossList = copy
+    InterruptReminder_Table.CurrentBossList = copy
 end
 
 ---Keep the boss list at the capacity of 30
 local function truncate_boss_list()
-    local copy = InterruptReminder_Table.currentBossList
+    local copy = InterruptReminder_Table.CurrentBossList
     local inserts = IR_Table.bossInserts
     if #copy >= 30 then
         for _ = 1, inserts do
@@ -299,7 +299,7 @@ local function truncate_boss_list()
         end
         printDebug("truncate_boss_list: Truncate boss list by " .. inserts .. ".")
     end
-    InterruptReminder_Table.currentBossList = copy
+    InterruptReminder_Table.CurrentBossList = copy
 end
 
 ---Options frame
@@ -413,6 +413,7 @@ function IR_Table:CreateInterface(self)
     --- Set SelectedSpells to default interrupt spells. Hide all checkboxes and set them to unchecked.
     local function remove_spell_checkboxes()
         self.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
+        IR_Table.SelectedSpells = self.selectedSpells
         for i = 1, 30 do
             local checkbox = IR_Table.CheckButtonFramePool[i].frame
             checkbox:Hide()
@@ -436,6 +437,7 @@ function IR_Table:CreateInterface(self)
             printWarning("No interrupt or crowd control spells were selected!")
         end
         self.SelectedSpells = copy
+        IR_Table.SelectedSpells = copy
     end
 
     --- Pre-run certain scripts
@@ -508,6 +510,7 @@ function IR_Table:CreateInterface(self)
     refresh_button:SetScript("OnClick", function()
         PlaySoundFile(567407, "SFX")
         self.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
+        IR_Table.SelectedSpells = self.selectedSpells
         pre_fill_checkboxes()
         IR_Table:GetAllCrowdControlSpells(self)
         generate_spell_checkboxes(IR_Table.panel)
@@ -518,12 +521,12 @@ function IR_Table:CreateInterface(self)
         LibButtonGlow.HideOverlayGlow(refresh_button)
     end)
     refresh_button:SetScript("OnEvent", function(_, event)
-        if event == 'PLAYER_SPECIALIZATION_CHANGED' then
+        if event == 'ACTIVE_PLAYER_SPECIALIZATION_CHANGED' then
             printInfo('Specialization changed! Please go to the mod settings to update your spell highlighting.')
             LibButtonGlow.ShowOverlayGlow(refresh_button)
         end
     end)
-    refresh_button:RegisterEvent('PLAYER_SPECIALIZATION_CHANGED')
+    refresh_button:RegisterEvent('ACTIVE_PLAYER_SPECIALIZATION_CHANGED')
 
     --- DEBUG MODE CHECKBOX
     local debug_mode = CreateFrame("CheckButton", UIParent, IR_Table.panel, "ChatConfigCheckButtonTemplate")
@@ -587,7 +590,10 @@ function IR_Table:GetAllCrowdControlSpells(self)
     local copy = {}
 
     copy = get_spellbook_spells()
-    copy = merge_two_tables(copy, get_specialization_spells())
+    local specialization_spells = get_specialization_spells()
+    if specialization_spells ~= nil then
+        copy = merge_two_tables(copy, get_specialization_spells())
+    end
     copy = remove_duplicates_from_nested_table(copy, 'spellName')
     self.Spells = copy
 end
@@ -596,13 +602,13 @@ end
 --- as either true or false depending on the circumstances. Since there is no actual API call to determine whether a
 --- target can be stunned, we need to make use of the information we do have access to. For example, units that have
 --- a frame around them more likely than not cannot be stunned. When in dungeons, this is troublesome since normal mobs
---- also have a frame around them. To get around that, we are reading InterruptReminder_Table.currentBossList to determine
+--- also have a frame around them. To get around that, we are reading InterruptReminder_Table.CurrentBossList to determine
 --- whether the current target is a boss or a minion of a boss in that dungeon, and therefore cannot be stunned.
 ---DEV NOTE: Although this works in most cases, a giant drake in a raid that is not a boss will be tagged as
 --- stunnable - that cannot be reasonably kept track of without having a huge table of all units that have a non-public
 --- flag that makes them stun immune. Basically, if the non-boss minion seems too big to be stunned, it probably is.
 function IR_Table:IsTargetABoss(self)
-    local bosses = self.currentBossList
+    local bosses = self.CurrentBossList
     --[[ There's a small bug here that I couldn't find a fix for. If the target switched to is nothing, it will still
          pull the target information from the previous target, even though GetUnitName should return nil at that point.
          Luckily, thin air cannot cast spells, so the rest of the addon will still function as intended. ]]
@@ -615,7 +621,7 @@ function IR_Table:IsTargetABoss(self)
             -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
             if bosses == nil then
                 IR_Table:Handle_ZoneChanged(self)
-                bosses = self.currentBossList
+                bosses = self.CurrentBossList
             end
 
             -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
@@ -707,20 +713,20 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     if interrupt_only == true then
         spells_table = {}
         spells_table = IR_Table.InterruptSpells[PlayerClass]
+    elseif interrupt_only == false then
+        spells_table = spells_table
     end
 
-    local readyToCast = {}
-    local stillOnCooldown = {}
+    local readyToCast, stillOnCooldown = {}, {}
 
     for i = 1, #spells_table do
         local start, duration = GetSpellCooldown(spells_table[i])
-        local spellLocation = IR_Table:FindSpellLocation(spells_table[i])
 
-        if start then
+        if type(start) == "number" then
+            local spellLocation = IR_Table:FindSpellLocation(spells_table[i])
             if start == 0 then
                 table.insert(readyToCast, { ['cooldown'] = start, ['location'] = spellLocation })
-            end
-            if start ~= 0 then
+            else
                 -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
                 local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
                 -- Safety check to ensure we don't save a negative number by mistake
@@ -767,15 +773,14 @@ end
 
 ---Handles the unhighlight of spells.
 function IR_Table:Handle_TargetStoppedCasting(self)
-    local spells = self.SelectedSpells
 
-    for i = 1, #spells do
-        local spellLocation = IR_Table:FindSpellLocation(spells[i])
+    for i = 1, #self.SelectedSpells do
+        local spellLocation = IR_Table:FindSpellLocation(self.SelectedSpells[i])
         if spellLocation ~= nil then
-            printDebug("Handle_TargetStoppedCasting: Hide spell " .. spells[i] .. " highlight at location " .. tostring(spellLocation) .. ".")
+            printDebug("Handle_TargetStoppedCasting: Hide spell " .. self.SelectedSpells[i] .. " highlight at location " .. tostring(spellLocation) .. ".")
             LibButtonGlow.HideOverlayGlow(spellLocation)
         else
-            printDebug("Handle_TargetStoppedCasting: Spell " .. spells[i] .. " is not in the action bars.")
+            printDebug("Handle_TargetStoppedCasting: Spell " .. self.SelectedSpells[i] .. " is not in the action bars.")
         end
     end
 end
@@ -789,12 +794,10 @@ function IR_Table:Handle_CurrentTargetSpellCasting(self)
 
     IR_Table:IsTargetCastingInterruptibleSpell()
 
-    local spells = self.SelectedSpells
-
     if IR_Table.IsInterruptible == true and IR_Table.CurrentTargetCanBeAttacked == true then
         if IR_Table.TargetCanBeStunned == true then
             -- Can be true only when Crowd Control spell tracking is enabled
-            local readyToCast, stillOnCooldown = IR_Table:GetSpellCooldowns(spells, false)
+            local readyToCast, stillOnCooldown = IR_Table:GetSpellCooldowns(self.SelectedSpells, false)
             for i = 1, #readyToCast do
                 if readyToCast[i].location ~= nil then
                     printDebug("Handle_CurrentTargetSpellCasting: Show highlight at location " .. tostring(readyToCast[i].location) .. ".")
@@ -804,8 +807,8 @@ function IR_Table:Handle_CurrentTargetSpellCasting(self)
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
                     IR_Table:IsTargetCastingInterruptibleSpell()
-                    if IR_Table.IsInterruptible == true then
-                        if readyToCast[i].location ~= nil then
+                    if IR_Table.IsInterruptible == true and IR_Table.CurrentTargetCanBeAttacked then
+                        if stillOnCooldown[i].location ~= nil then
                             printDebug("Handle_CurrentTargetSpellCasting: Show highlight at location " .. tostring(stillOnCooldown[i].location) .. ".")
                             LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
                         end
@@ -813,7 +816,7 @@ function IR_Table:Handle_CurrentTargetSpellCasting(self)
                 end)
             end
         else
-            local readyToCast, stillOnCooldown = IR_Table:GetSpellCooldowns(spells, true)
+            local readyToCast, stillOnCooldown = IR_Table:GetSpellCooldowns(self.SelectedSpells, true)
             for i = 1, #readyToCast do
                 if readyToCast[i].location ~= nil then
                     printDebug("Handle_CurrentTargetSpellCasting: Show highlight at location " .. tostring(readyToCast[i].location) .. ".")
@@ -823,8 +826,8 @@ function IR_Table:Handle_CurrentTargetSpellCasting(self)
             for i = 1, #stillOnCooldown do
                 C_Timer.After(stillOnCooldown[i].cooldown, function()
                     IR_Table:IsTargetCastingInterruptibleSpell()
-                    if IR_Table.IsInterruptible == true then
-                        if readyToCast[i].location ~= nil then
+                    if IR_Table.IsInterruptible == true and IR_Table.CurrentTargetCanBeAttacked then
+                        if stillOnCooldown[i].location ~= nil then
                             printDebug("Handle_CurrentTargetSpellCasting: Show highlight at location " .. tostring(stillOnCooldown[i].location) .. ".")
                             LibButtonGlow.ShowOverlayGlow(stillOnCooldown[i].location)
                         end
@@ -840,7 +843,7 @@ end
 --- can have a maximum of 9 unit types present. Return 'empty' if the current zone has no bosses.
 function IR_Table:Handle_ZoneChanged(self)
     get_bosses()
-    self.currentBossList = remove_duplicates_from_array(self.currentBossList)
+    self.CurrentBossList = remove_duplicates_from_array(self.CurrentBossList)
     truncate_boss_list()
 end
 
@@ -852,39 +855,40 @@ function IR_Table:Handle_PlayerSwitchingTargets(self)
 
     -- Check if the target is valid to attack by the player (e.g. not a friendly player, friendly npc, a pet...)
     if UnitCanAttack('player', 'target') then
-        IR_Table.CurrentTargetCanBeAttacked = true
+        self.CurrentTargetCanBeAttacked = true
         printDebug("Handle_PlayerSwitchingTargets: Unit can be attacked.")
         -- Determine whether the target can be stunned
-        IR_Table:IsTargetABoss(self)
+        IR_Table:IsTargetABoss(InterruptReminder_Table)
         -- When the player gains his initial target or switches to a target, check whether the target is casting an
         -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
         IR_Table:Handle_CurrentTargetSpellCasting(self)
     else
         printDebug("Handle_PlayerSwitchingTargets: Unit cannot be attacked.")
-        IR_Table.CurrentTargetCanBeAttacked = false
+        self.CurrentTargetCanBeAttacked = false
     end
 end
 
 ---Handles the logic for when the player initially logs in or does a /reload
 function IR_Table:Handle_PlayerLogin()
-    -- Initial values for IR_Table
 
     if InterruptReminder_FirstLaunch == nil then
         InterruptReminder_FirstLaunch = true
         printInfo('First time loading the add-on? Type /irhelp for more information.')
     end
 
-    if InterruptReminder_Table == nil then
-        InterruptReminder_Table = {}
-        InterruptReminder_Table.Spells = {}
-        InterruptReminder_Table.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
-        InterruptReminder_Table.Debug = false
-    end
+    if InterruptReminder_Table == nil then InterruptReminder_Table = {} end
+    if InterruptReminder_Table.Spells == nil then InterruptReminder_Table.Spells = {} end
+    if InterruptReminder_Table.SelectedSpells == nil then InterruptReminder_Table.SelectedSpells = IR_Table.InterruptSpells[PlayerClass] end
+    if InterruptReminder_Table.CurrentBossList == nil then InterruptReminder_Table.CurrentBossList = {} end
+    if InterruptReminder_Table.Debug == nil then InterruptReminder_Table.Debug = false end
 
     C_Timer.After(1, function()
         IR_Table:CreateInterface(InterruptReminder_Table)
         printDebug("Handle_PlayerLogin: Options interface created.")
     end)
+
+    -- Initial values for IR_Table
+    IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
 end
 
 function f:OnEvent(event, ...)
@@ -892,15 +896,13 @@ function f:OnEvent(event, ...)
         IR_Table:Handle_PlayerLogin()
     end
     if (event == 'UNIT_SPELLCAST_START' or event == 'UNIT_SPELLCAST_CHANNEL_START') and ... == 'target' then
-        printDebug("UNIT_SPELLCAST_START: Target started casting or channeling.")
-        IR_Table:Handle_CurrentTargetSpellCasting(InterruptReminder_Table)
+        IR_Table:Handle_CurrentTargetSpellCasting(IR_Table)
     end
     if (event == 'UNIT_SPELLCAST_INTERRUPTED' or event == 'UNIT_SPELLCAST_SUCCEEDED' or event == 'UNIT_SPELLCAST_STOP' or event == 'UNIT_SPELLCAST_CHANNEL_STOP') and ... == 'target' then
-        printDebug("UNIT_SPELLCAST_INTERRUPTED: Target stopped casting or channeling.")
-        IR_Table:Handle_TargetStoppedCasting(InterruptReminder_Table)
+        IR_Table:Handle_TargetStoppedCasting(IR_Table)
     end
     if event == 'PLAYER_TARGET_CHANGED' then
-        IR_Table:Handle_PlayerSwitchingTargets(InterruptReminder_Table)
+        IR_Table:Handle_PlayerSwitchingTargets(IR_Table)
     end
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') and InterruptReminder_Table.IsInit == true then
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
