@@ -1,3 +1,9 @@
+## v2.0.0
+New Addition:
+
+    Options page! All backslash commands except for /irinfo have been removed and migrated to a per-character options page.
+    The player can now select individual spells that should be highlighted when an interruptible spell is being cast by the target.
+
 ## v1.3.1
 Bug Fixes:
 
