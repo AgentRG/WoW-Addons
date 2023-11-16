@@ -101,6 +101,7 @@ local C_ClassTalents = C_ClassTalents
 local C_Traits = C_Traits
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
+local IsPlayerSpell = IsPlayerSpell
 
 -- Local version of Lua global functions for slightly faster runtime access
 local string = string
@@ -720,20 +721,24 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     local readyToCast, stillOnCooldown = {}, {}
 
     for i = 1, #spells_table do
-        local start, duration = GetSpellCooldown(spells_table[i])
+        local _, _, _, _, _, _, spellID = GetSpellInfo(spells_table[i])
+        local isInSpellbook = IsPlayerSpell(spellID)
+        if isInSpellbook then
+            local start, duration = GetSpellCooldown(spellID)
 
-        if type(start) == "number" then
-            local spellLocation = IR_Table:FindSpellLocation(spells_table[i])
-            if start == 0 then
-                table.insert(readyToCast, { ['cooldown'] = start, ['location'] = spellLocation })
-            else
-                -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
-                local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
-                -- Safety check to ensure we don't save a negative number by mistake
-                if calculatedTimeRemaining > 0 then
-                    -- Check that the spell will be ready before the spellcast from the target ends
-                    if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
-                        table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = spellLocation })
+            if type(start) == "number" then
+                local spellLocation = IR_Table:FindSpellLocation(spells_table[i])
+                if start == 0 then
+                    table.insert(readyToCast, { ['cooldown'] = start, ['location'] = spellLocation })
+                else
+                    -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
+                    local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
+                    -- Safety check to ensure we don't save a negative number by mistake
+                    if calculatedTimeRemaining > 0 then
+                        -- Check that the spell will be ready before the spellcast from the target ends
+                        if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
+                            table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = spellLocation })
+                        end
                     end
                 end
             end
