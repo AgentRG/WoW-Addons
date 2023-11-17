@@ -4,6 +4,10 @@ New Addition:
     Options page! All backslash commands except for /irinfo have been removed and migrated to a per-character options page.
     The player can now select individual spells that should be highlighted when an interruptible spell is being cast by the target.
 
+Bug Fixes:
+
+    Fixed a bug where off-cooldown spells that are eligible to be highlighted just didn't highlight. Issue had to do with the data returned by GetSpellCooldown().
+
 ## v1.3.1
 Bug Fixes:
 

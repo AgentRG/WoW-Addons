@@ -648,35 +648,6 @@ function IR_Table:IsTargetABoss(self)
     end
 end
 
----Scan all of the player action bars and find the slot location for all interrupting spells for the player's class.
---- Found in: https://www.wowinterface.com/forums/showthread.php?t=45731 - modified a bit to meet the needs of this addon
-function IR_Table:FindAllInterruptSpells(spells)
-    local buttonTables = {}
-    for _, spell in ipairs(spells) do
-        for _, barName in ipairs(IR_Table.ActionBars) do
-            for i = 1, 12 do
-                local button = _G[barName .. 'Button' .. i]
-                local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
-
-                if HasAction(slot) then
-                    local actionType, id, _, actionName = GetActionInfo(slot)
-
-                    if actionType == 'spell' then
-                        actionName = GetSpellInfo(id)
-                    end
-                    if actionName then
-                        if string.lower(actionName) == string.lower(spell) then
-                            printDebug("FindAllInterruptSpells: Found spell " .. tostring(actionName) .. " at action bar location " .. tostring(button) .. ".")
-                            table.insert(buttonTables, button)
-                        end
-                    end
-                end
-            end
-        end
-    end
-    InterruptReminder_Table.ActionBarTable = buttonTables
-end
-
 ---Same as IR_Table:FindAllInterruptSpells, but for a single spell. Used when the callback handler is called
 --- in case a spell was on cooldown.
 function IR_Table:FindSpellLocation(spell)
@@ -719,17 +690,14 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     end
 
     local readyToCast, stillOnCooldown = {}, {}
-
     for i = 1, #spells_table do
-        local _, _, _, _, _, _, spellID = GetSpellInfo(spells_table[i])
+        local spell = spells_table[i]
+        local _, _, _, _, _, _, spellID = GetSpellInfo(spell)
         local isInSpellbook = IsPlayerSpell(spellID)
         if isInSpellbook then
             local start, duration = GetSpellCooldown(spellID)
-
-            if type(start) == "number" then
-                local spellLocation = IR_Table:FindSpellLocation(spells_table[i])
-                if start == 0 then
-                    table.insert(readyToCast, { ['cooldown'] = start, ['location'] = spellLocation })
+                if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
+                    table.insert(readyToCast, {['location'] = IR_Table:FindSpellLocation(spell)})
                 else
                     -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
                     local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
@@ -737,11 +705,10 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
                     if calculatedTimeRemaining > 0 then
                         -- Check that the spell will be ready before the spellcast from the target ends
                         if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
-                            table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = spellLocation })
+                            table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = IR_Table:FindSpellLocation(spell)})
                         end
                     end
                 end
-            end
         end
     end
     printDebug("GetSpellCooldowns: " .. #readyToCast .. " spells ready to cast. " .. #stillOnCooldown .. " spells are still on cooldown.")
@@ -860,10 +827,10 @@ function IR_Table:Handle_PlayerSwitchingTargets(self)
 
     -- Check if the target is valid to attack by the player (e.g. not a friendly player, friendly npc, a pet...)
     if UnitCanAttack('player', 'target') then
+        IR_Table:IsTargetABoss(InterruptReminder_Table)
         self.CurrentTargetCanBeAttacked = true
         printDebug("Handle_PlayerSwitchingTargets: Unit can be attacked.")
         -- Determine whether the target can be stunned
-        IR_Table:IsTargetABoss(InterruptReminder_Table)
         -- When the player gains his initial target or switches to a target, check whether the target is casting an
         -- interruptible spell, and proceed to handle the highlighting of spells in the action bars
         IR_Table:Handle_CurrentTargetSpellCasting(self)
