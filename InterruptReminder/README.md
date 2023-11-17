@@ -13,7 +13,7 @@ who's primarily function is to cause an interrupt. The spell being tracked are a
   * Evoker: Quell 
   * Hunter: Counter Shot, 'Muzzle 
   * Mage: Counterspell 
-  * Monk: Spear Hand Strike 
+  * Monk: Spear Hand Strike, Quaking Palm
   * Paladin: Rebuke, Avenger's Shield 
   * Priest: Silence 
   * Rogue: Kick 
