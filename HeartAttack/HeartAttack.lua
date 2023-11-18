@@ -460,7 +460,7 @@ end
 function HA_Table.handle_player_dead()
     HeartAttack_GlobalTable.HeartAttack_DeadTime = time()
     printDebug("PLAYER_DEAD: Player died. Set HeartAttack_DeadTime to "..HeartAttack_GlobalTable.HeartAttack_DeadTime..". Subtract 10.")
-    HA_Table.subtract_max_val(10)
+    HA_Table.subtract_max_val(100)
 end
 
 --If the player leveled up, take the new level and subtract it from HeartAttack_MaxVal.
@@ -472,7 +472,7 @@ end
 --If the player successfully casts a spell, subtract 1 from HeartAttack_MaxVal
 function HA_Table.handle_spellcast_succeeded()
     printDebug("UNIT_SPELLCAST_SUCCEEDED: subtract 1.")
-    HA_Table.subtract_max_val()
+    HA_Table.subtract_max_val(5)
 end
 
 --If the player said something in chat, subtract 1 from HeartAttack_MaxVal.
@@ -489,7 +489,7 @@ end
 --If the player learns a new spell or profession, subtract 1 from HeartAttack_MaxVal.
 function HA_Table.handle_common_event(event)
     printDebug(event..": Subtract 1.")
-    HA_Table.subtract_max_val()
+    HA_Table.subtract_max_val(2)
 end
 
 --If the player interacts with his bag, subtract 1 from HeartAttack_MaxVal.
@@ -507,7 +507,7 @@ function HA_Table.handle_spellcast_sent()
         spell_lock = true
         f:UnregisterEvent('UNIT_SPELLCAST_SUCCEEDED')
         printDebug("UNIT_SPELLCAST_SENT: subtract 1.")
-        HA_Table.subtract_max_val()
+    HA_Table.subtract_max_val(5)
     end
 end
 
