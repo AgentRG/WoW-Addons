@@ -1,4 +1,6 @@
-local HA_Table = {}
+local HA_Table = {
+    panel = CreateFrame("Frame", "HeartAttackSettings")
+}
 
 --[[READ FIRST
 If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
@@ -45,10 +47,9 @@ end
 
 --Options frame
 local function create_interface()
-    local panel = CreateFrame("Frame", "HeartAttackSettings")
-    panel.name = "Heart Attack"
+    HA_Table.panel.name = "Heart Attack"
 
-    local zeroMode = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
+    local zeroMode = CreateFrame("CheckButton", nil, HA_Table.panel, "ChatConfigCheckButtonTemplate")
     zeroMode.Text:SetText("Enable Zero Mode")
     zeroMode:SetPoint("TOPLEFT", 8, -10)
     zeroMode.tooltip = "When enabled, the game will end when the player exhausts the number used for the game. Warning:"..
@@ -69,7 +70,7 @@ local function create_interface()
         end
     end)
 
-    local debugButton = CreateFrame("CheckButton", nil, panel, "ChatConfigCheckButtonTemplate")
+    local debugButton = CreateFrame("CheckButton", nil, HA_Table.panel, "ChatConfigCheckButtonTemplate")
     debugButton.Text:SetText("Enable Debugger")
     debugButton:SetPoint("TOPLEFT", 8, -30)
     debugButton.tooltip = "Enable the debugger for event handling and other functions."
@@ -89,7 +90,7 @@ local function create_interface()
         end
     end)
 
-    local resetButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    local resetButton = CreateFrame("Button", nil, HA_Table.panel, "UIPanelButtonTemplate")
     resetButton:SetText("Reset Mod")
     resetButton:SetWidth(100)
     resetButton:SetPoint("TOPLEFT", 8, -55)
@@ -129,7 +130,7 @@ local function create_interface()
         StaticPopup_Show("HeartAttack")
     end)
 
-    local userNote = panel:CreateFontString(nil, "ARTWORK", "GameFontWhite")
+    local userNote = HA_Table.panel:CreateFontString(nil, "ARTWORK", "GameFontWhite")
     userNote:SetPoint("TOPLEFT", 8, 0)
     userNote:SetPoint("BOTTOMRIGHT", -8, 0)
     userNote:SetJustifyH("LEFT")
@@ -137,7 +138,11 @@ local function create_interface()
             " roles, open the file HeartAttack/HeartAttack.lua in your text editor of choice and read line 3 that says"..
             " READ FIRST for instructions.")
     userNote:SetWordWrap(true)
-    InterfaceOptions_AddCategory(panel, true)
+    InterfaceOptions_AddCategory(HA_Table.panel, true)
+end
+
+function HeartAttack_OnAddonCompartmentClick()
+    InterfaceOptionsFrame_OpenToCategory(HA_Table.panel)
 end
 
 --Game Over frame
@@ -510,7 +515,8 @@ function f:OnEvent(event, arg1, arg2, arg3, arg4, _, _, _, _, _, _, _, arg12)
     --Initial load of AddOn when player logs in
     if event == 'PLAYER_ENTERING_WORLD' then HA_Table.handle_player_entering_world() end
     --Handling of all events that cause HeartAttack_MaxVal to lower as well as counting of chat messages to use during randomizer
-    if HeartAttack_GlobalTable.HeartAttack_GameOver ~= nil and
+    if HeartAttack_GlobalTable ~= nil and
+            HeartAttack_GlobalTable.HeartAttack_GameOver ~= nil and
             HeartAttack_GlobalTable.HeartAttack_GameOver == false and
             HeartAttack_GlobalTable.HeartAttack_EventLock == false then
         if event == 'PLAYER_STARTED_MOVING' then HA_Table.handle_player_started_moving()

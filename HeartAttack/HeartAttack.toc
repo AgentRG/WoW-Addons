@@ -3,5 +3,6 @@
 ## Title: Heart Attack
 ## Author: AgentRG
 ## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_GlobalTable
+## AddonCompartmentFunc: HeartAttack_OnAddonCompartmentClick
 
 HeartAttack.lua
