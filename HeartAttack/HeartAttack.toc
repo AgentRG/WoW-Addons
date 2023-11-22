@@ -4,5 +4,6 @@
 ## Author: AgentRG
 ## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_GlobalTable
 ## AddonCompartmentFunc: HeartAttack_OnAddonCompartmentClick
+## IconTexture: Interface\AddOns\HeartAttack\Resources\spell_brokenheart.png
 
 HeartAttack.lua
