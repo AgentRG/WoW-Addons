@@ -10,3 +10,5 @@ some humor to the tragedy that occurred. Sound file plays only once and stops pl
 revived by any means.
 * [ThreatTrack](https://github.com/AgentRG/WoW-Addons/tree/main/ThreatTrack) - Keep track of all threat percentages through a display of a table of all units currently in-combat with the player, as
 in, the unit in question is aware of the player's existence and considers him a threat to some degree.
+* [HeartAttack](https://github.com/AgentRG/WoW-Addons/tree/main/HeartAttack) - Game within a game. Every 10 minutes, role for a chance to get a virtual heart attack. Actual gameplay of WoW not impacted. 
+With every action taken by the player, the chance of getting a heart attack increases every so slightly, but ever so low.
