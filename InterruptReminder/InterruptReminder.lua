@@ -5,44 +5,58 @@ local IR_Table = {
     -- Pool of frames that will contain the check buttons that the player wants checked in the options interface
     CheckButtonFramePool = {},
     -- WoW default action bar names
-    ActionBars = { 'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft',
-                   'MultiBar7', 'MultiBar6', 'MultiBar5' },
+    ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
+                   'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
+    ElvUIActionBars = { 'ElvUI_Bar1Button', 'ElvUI_Bar2Button', 'ElvUI_Bar3Button', 'ElvUI_Bar4Button',
+                        'ElvUI_Bar5Button', 'ElvUI_Bar6Button', 'ElvUI_Bar7Button', 'ElvUI_Bar8Button',
+                        'ElvUI_Bar9Button', 'ElvUI_Bar10Button', 'ElvUI_Bar13Button', 'ElvUI_Bar14Button',
+                        'ElvUI_Bar15Button' },
     --All keywords that are found in varying Crowd Control spells
     CrownControlTypes = { 'knock', 'control', 'confuse', 'fear', 'flee', 'stun', 'interrupt', 'incapacit',
-                          'intimidat', 'sleep', 'disorient', 'horr', 'silenc' },
+                          'intimidat', 'sleep', 'disorient', 'horr', 'silenc', 'counter' },
     --Spells that will get picked up by IR_Table:get_all_crowd_control_spells because they contain a keyword from CrownControlTypes that we do not want to be added to the list
     ExtraneousCCSpells = {
-        --Evoker
-        'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons',
-        --Warlock
-        'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard',
-        --Humans
-        'Will to Survive',
-        --Warrior
-        'Enraged Regeneration',
-        --Worgen
-        'Calm the Wolf',
-        --Mage
-        'Blink',
-        --Demon Hunter
-        'Isolated Prey', 'Chaos Fragments', 'Disrupting Fury',
-        --Druid
-        'Barkskin',
-        --Hunter
-        'Eyes of the Beast',
-        --Death Knight
-        "Death's Advance", 'Lichborne',
-        --Priest
-        'Pain Suppression', 'Guardian Spirit',
-        --Orc
-        'Hardiness',
-        --Undead
-        'Will of the Forsaken',
-        --Paladin
-        'Divine Shield', 'Divine Protection', "Justicar's Vengeance",
-        --Shaman
-        --Monk
-        'Restoral', 'Storm, Earth, and Fire'
+        ['Evoker'] = {'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons'},
+        ['Warlock'] = {'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard', 'Nightmare', 'Horrify'},
+        ['Warrior'] = {'Enraged Regeneration', 'Concussive Blows', 'Endurance Training', 'Berserker Shout',
+                       'Berserker Rage', 'Cacophonous Roar', 'Menace', 'Bladestorm', 'Berserker Stance'},
+        ['Mage'] = {'Blink', 'Frost Nova', 'Volatile Detonation', 'Quick Witted', 'Time Manipulation'},
+        ['Demon Hunter'] = {'Isolated Prey', 'Chaos Fragments', 'Disrupting Fury'},
+        ['Druid'] = {'Barkskin', 'Light of the Sun', 'Pouncing Strikes', 'Inner Peace'},
+        ['Hunter'] = {'Eyes of the Beast', 'Binding Shackles', 'Bestial Wrath'},
+        ['Death Knight'] = {"Death's Advance", 'Lichborne', 'Coldthirst', 'Icebound Fortitude'},
+        ['Priest'] = {'Pain Suppression', 'Guardian Spirit', 'Dispersion', 'Ultimate Penitence', 'Petrifying Scream', 'Censure',
+                      'Last Word', "Idol of Y'Shaarj"},
+        ['Paladin'] = {'Divine Shield', 'Divine Protection', "Justicar's Vengeance", 'Concentration Aura', 'Auras of the Resolute',
+                       'Punishment'},
+        ['Rogue'] = {'Sap', 'Iron Wire'},
+        ['Monk'] = {'Restoral', 'Storm, Earth, and Fire', "Shaohao's Lessons"},
+        ['Shaman'] = {'Tumultuous Fissures', 'Primal Elementalist', 'Mountains Will Fall', "Spiritwalker's Aegis", 'Tremor Totem',
+                      'Static Charge', 'Tranquil Air Totem', 'Thundershock'},
+        ['Humans'] = {'Will to Survive'},
+        ['Dwarf'] = {},
+        ['Night Elf'] = {},
+        ['Gnome'] = {},
+        ['Draenei'] = {},
+        ['Pandaren'] = {},
+        ['Dracthyr'] = {},
+        ['Void Elf'] = {},
+        ['Lightforged Draenei'] = {},
+        ['Dark Iron Dwarf'] = {},
+        ['Kul Tiran'] = {},
+        ['Mechagnome'] = {},
+        ['Tauren'] = {},
+        ['Troll'] = {},
+        ['Blood Elf'] = {},
+        ['Goblin'] = {},
+        ['Nightborne'] = {},
+        ['Highmountain Tauren'] = {},
+        ["Mag'har Orc"] = {},
+        ['Vulpera'] = {},
+        ['Worgen'] = {'Calm the Wolf'},
+        ['Orc'] = {'Hardiness'},
+        ['Undead'] = {'Will of the Forsaken'},
+        ['Zandalari Troll'] = {"Regeneratin'"}
     },
     --Default interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary effect)
     InterruptSpells = {
@@ -68,11 +82,13 @@ local IR_Table = {
     TargetCanBeStunned = false,
     CurrentTargetCanBeAttacked = false,
     SpecializationChanged = false,
-    panel = CreateFrame("Frame", "InterruptReminderSettings")
+    panel = CreateFrame("Frame", "InterruptReminderSettings"),
+    ButtonCache = {}
 }
 
 local f = CreateFrame('Frame', 'InterruptReminder')
 local PlayerClass = UnitClass('player')
+local PlayerRace = UnitRace('player')
 
 -- Library used to highlight spells. Without the library, the addon will encounter protected action access error
 local LibButtonGlow = LibStub("LibButtonGlow-1.0")
@@ -102,6 +118,7 @@ local C_Traits = C_Traits
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
 local IsPlayerSpell = IsPlayerSpell
+local IsAddOnLoaded = IsAddOnLoaded
 
 -- Local version of Lua global functions for slightly faster runtime access
 local string = string
@@ -109,7 +126,6 @@ local table = table
 local ipairs = ipairs
 local pairs = pairs
 local select = select
-local print = print
 
 local function printInfo(text)
     print("|cff00ffffInfo (InterruptReminder): |cffffffff" .. text)
@@ -172,6 +188,7 @@ end
 local function get_specialization_spells()
     local spellIDs = {}
     local list = {}
+    local extraneousSpells = merge_two_tables(IR_Table.ExtraneousCCSpells[PlayerClass], IR_Table.ExtraneousCCSpells[PlayerRace])
 
     local configID = C_ClassTalents.GetActiveConfigID()
     if configID == nil then
@@ -201,7 +218,7 @@ local function get_specialization_spells()
     for _, spellId in ipairs(spellIDs) do
         local spell = Spell:CreateFromSpellID(spellId)
         local spellName = spell:GetSpellName()
-        if spellName and not tContains(IR_Table.ExtraneousCCSpells, spellName) then
+        if spellName and not tContains(extraneousSpells, spellName) then
 
             if spell:IsSpellEmpty() == false then
                 spell:ContinueOnSpellLoad(function()
@@ -225,6 +242,7 @@ end
 local function get_spellbook_spells()
     local list = {}
     local numSpellTabs = GetNumSpellTabs()
+    local extraneousSpells = merge_two_tables(IR_Table.ExtraneousCCSpells[PlayerClass], IR_Table.ExtraneousCCSpells[PlayerRace])
 
     for tabIndex = 1, numSpellTabs do
         local _, _, offset, numSpells = GetSpellTabInfo(tabIndex)
@@ -232,7 +250,7 @@ local function get_spellbook_spells()
         for spellIndex = offset + 1, offset + numSpells do
             local spellName, _, spellId = GetSpellBookItemName(spellIndex, BOOKTYPE_SPELL)
 
-            if spellName and not tContains(IR_Table.ExtraneousCCSpells, spellName) then
+            if spellName and not tContains(extraneousSpells, spellName) then
                 local spell = Spell:CreateFromSpellID(spellId)
 
                 if spell:IsSpellEmpty() == false then
@@ -648,28 +666,60 @@ function IR_Table:IsTargetABoss(self)
     end
 end
 
----Same as IR_Table:FindAllInterruptSpells, but for a single spell. Used when the callback handler is called
---- in case a spell was on cooldown.
+---Return the button location of the spell from the cached ButtonCache. If there is no cache for the button or the
+--- slot has been updated, then find the location of the button and save it to ButtonCache.
 function IR_Table:FindSpellLocation(spell)
-    for _, barName in ipairs(IR_Table.ActionBars) do
-        for i = 1, 12 do
-            local button = _G[barName .. 'Button' .. i]
-            local slot = button:GetPagedID() or button:CalculateAction() or button:GetAttribute('action')
 
-            if HasAction(slot) then
-                local actionType, id, _, actionName = GetActionInfo(slot)
+    spell = string.lower(spell)
 
-                if actionType == 'spell' then
-                    actionName = GetSpellInfo(id)
-                end
+    local function find_button()
+        local actionBars
+        if IsAddOnLoaded("ElvUI") == true then
+            actionBars = IR_Table.ElvUIActionBars
+        else
+            actionBars = IR_Table.ActionBars
+        end
+            for _, barName in ipairs(actionBars) do
+                for i = 1, 12 do
+                    local button = _G[barName .. i]
+                    local slot = button:GetAttribute('action') or button:GetPagedID()
 
-                if actionName then
-                    if string.lower(actionName) == string.lower(spell) then
-                        return button
+                    if HasAction(slot) then
+                        local actionType, id, _, actionName = GetActionInfo(slot)
+
+                        if actionType == 'spell' then
+                            actionName = GetSpellInfo(id)
+                        end
+
+                        if actionName then
+                            if string.lower(actionName) == spell then
+                                IR_Table.ButtonCache[spell] = {button = button, slot = slot}
+                            end
+                        end
                     end
                 end
             end
+    end
+
+    local function is_button_still_spell()
+        local _, _, _, actionName = GetActionInfo(IR_Table.ButtonCache[spell].slot)
+        if actionName ~= spell then
+            IR_Table.ButtonCache[spell] = nil
+            find_button()
         end
+    end
+
+
+    if IR_Table.ButtonCache[spell] == nil then
+        find_button()
+    else
+        is_button_still_spell()
+    end
+
+    if IR_Table.ButtonCache[spell] ~= nil then
+        return IR_Table.ButtonCache[spell].button
+    else
+        return nil
     end
 end
 
@@ -690,12 +740,13 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     end
 
     local readyToCast, stillOnCooldown = {}, {}
-    for i = 1, #spells_table do
-        local spell = spells_table[i]
-        local _, _, _, _, _, _, spellID = GetSpellInfo(spell)
-        local isInSpellbook = IsPlayerSpell(spellID)
-        if isInSpellbook then
-            local start, duration = GetSpellCooldown(spellID)
+    if spells_table ~= nil then
+        for i = 1, #spells_table do
+            local spell = spells_table[i]
+            local _, _, _, _, _, _, spellID = GetSpellInfo(spell)
+            local isInSpellbook = IsPlayerSpell(spellID)
+            if isInSpellbook then
+                local start, duration = GetSpellCooldown(spellID)
                 if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
                     table.insert(readyToCast, {['location'] = IR_Table:FindSpellLocation(spell)})
                 else
@@ -709,6 +760,7 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
                         end
                     end
                 end
+            end
         end
     end
     printDebug("GetSpellCooldowns: " .. #readyToCast .. " spells ready to cast. " .. #stillOnCooldown .. " spells are still on cooldown.")
@@ -745,14 +797,15 @@ end
 
 ---Handles the unhighlight of spells.
 function IR_Table:Handle_TargetStoppedCasting(self)
-
-    for i = 1, #self.SelectedSpells do
-        local spellLocation = IR_Table:FindSpellLocation(self.SelectedSpells[i])
-        if spellLocation ~= nil then
-            printDebug("Handle_TargetStoppedCasting: Hide spell " .. self.SelectedSpells[i] .. " highlight at location " .. tostring(spellLocation) .. ".")
-            LibButtonGlow.HideOverlayGlow(spellLocation)
-        else
-            printDebug("Handle_TargetStoppedCasting: Spell " .. self.SelectedSpells[i] .. " is not in the action bars.")
+    if self.SelectedSpells ~= nil then
+        for i = 1, #self.SelectedSpells do
+            local spellLocation = IR_Table:FindSpellLocation(self.SelectedSpells[i])
+            if spellLocation ~= nil then
+                printDebug("Handle_TargetStoppedCasting: Hide spell " .. self.SelectedSpells[i] .. " highlight at location " .. tostring(spellLocation) .. ".")
+                LibButtonGlow.HideOverlayGlow(spellLocation)
+            else
+                printDebug("Handle_TargetStoppedCasting: Spell " .. self.SelectedSpells[i] .. " is not in the action bars.")
+            end
         end
     end
 end
