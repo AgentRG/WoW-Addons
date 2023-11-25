@@ -1,3 +1,15 @@
+## v2.0.1
+New Addition:
+
+    Support for ElvUI. Should work the same as WoW's default interface.
+    Caching of action button locations for faster repeat access.
+    Improved algorithm that finds extraneous spells for faster search.
+
+Bug Fixes:
+
+    Fixed Mage Counterspell not appearing in the options menu.
+    Fixed nil exception when selected spells are empty.
+
 ## v2.0.0
 New Addition:
 
