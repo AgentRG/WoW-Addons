@@ -24,3 +24,4 @@ who's primarily function is to cause an interrupt. The spell being tracked are a
 * Optional opt-in into additional tracking of any spell capable of applying a Crowd Control affect (also interrupting)
 by going to the options menu and enabling "Enable Advanced Spell Selection".
   * Smart algorithm runs in the background with passing accuracy do determine whether the target of the spell is susceptible to crowd control spells.
+* Custom, mostly configurable highlights of 4 varieties.
