@@ -1,0 +1,8 @@
+## Interface: 100200
+## Version: 1.0.0
+## Title: Runescape Overhaul
+## Author: AgentRG
+
+Fonts.lua
+
+Core.lua

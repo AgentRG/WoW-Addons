@@ -1,0 +1,3 @@
+local addonName, addonData = ...
+
+addonData:Init_Fonts()
