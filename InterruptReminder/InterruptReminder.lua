@@ -1191,59 +1191,49 @@ end
 
 function IR_Table:Show_Glow(frame)
     if IR_Table.GlowCache == nil then
-        local name = IR_Table.SelectedGlow.name
-
-        if name == 'Proc' then
-            IR_Table.GlowCache = function(frame_loc)
+        local highlights = {
+            ['Proc'] = function(frame_loc)
                 LibCustomGlow.ProcGlow_Start(frame_loc)
-            end
-        elseif name == 'Pixel' then
-            IR_Table.GlowCache = function(frame_loc)
+            end,
+            ['Pixel'] = function(frame_loc)
                 LibCustomGlow.PixelGlow_Start(frame_loc, IR_Table.SelectedGlow.color,
                         IR_Table.SelectedGlow.N, nil, nil, IR_Table.SelectedGlow.thickness, nil, nil,
                         IR_Table.SelectedGlow.border)
-            end
-        elseif name == 'Cast' then
-            IR_Table.GlowCache = function(frame_loc)
+            end,
+            ['Cast'] = function(frame_loc)
                 LibCustomGlow.AutoCastGlow_Start(frame_loc, IR_Table.SelectedGlow.color,
                         IR_Table.SelectedGlow.N, IR_Table.SelectedGlow.frequency, IR_Table.SelectedGlow.scale)
-            end
-        else
-            IR_Table.GlowCache = function(frame_loc)
+            end,
+            ['Glow'] = function(frame_loc)
                 LibCustomGlow.ButtonGlow_Start(frame_loc, IR_Table.SelectedGlow.color, IR_Table.SelectedGlow.frequency)
             end
-        end
-        IR_Table.GlowCache(frame)
-    else
-        IR_Table.GlowCache(frame)
+        }
+        local name = IR_Table.SelectedGlow.name
+        IR_Table.GlowCache = highlights[name]
     end
+    IR_Table.GlowCache(frame)
 end
 
 function IR_Table:Hide_Glow(frame)
     if IR_Table.HideCache == nil then
-        local name = IR_Table.SelectedGlow.name
-
-        if name == 'Proc' then
-            IR_Table.HideCache = function(frame_loc)
+        local highlights = {
+            ['Proc'] = function(frame_loc)
                 LibCustomGlow.ProcGlow_Stop(frame_loc)
-            end
-        elseif name == 'Pixel' then
-            IR_Table.HideCache = function(frame_loc)
+            end,
+            ['Pixel'] = function(frame_loc)
                 LibCustomGlow.PixelGlow_Stop(frame_loc)
-            end
-        elseif name == 'Cast' then
-            IR_Table.HideCache = function(frame_loc)
+            end,
+            ['Cast'] = function(frame_loc)
                 LibCustomGlow.AutoCastGlow_Stop(frame_loc)
-            end
-        else
-            IR_Table.HideCache = function(frame_loc)
+            end,
+            ['Glow'] = function(frame_loc)
                 LibCustomGlow.ButtonGlow_Stop(frame_loc)
             end
-        end
-        IR_Table.HideCache(frame)
-    else
-        IR_Table.HideCache(frame)
+        }
+        local name = IR_Table.SelectedGlow.name
+        IR_Table.HideCache = highlights[name]
     end
+    IR_Table.HideCache(frame)
 end
 
 ---Handles the unhighlight of spells.
