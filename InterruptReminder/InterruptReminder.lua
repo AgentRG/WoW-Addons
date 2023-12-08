@@ -85,7 +85,9 @@ local IR_Table = {
     CurrentTargetCanBeAttacked = false,
     SpecializationChanged = false,
     panel = CreateFrame("Frame", "InterruptReminderSettings"),
-    ButtonCache = {}
+    ButtonCache = {},
+    GlowCache = nil,
+    HideCache = nil
 }
 
 local f = CreateFrame('Frame', 'InterruptReminder')
@@ -513,6 +515,8 @@ function IR_Table:CreateInterface(self)
                     check_and_uncheck_frames(checkboxes_copy, { checkboxes[i] })
                     hide_and_show_frames(hide_sliders, show_sliders)
                     IR_Table:Hide_Glow(glow_texture_test)
+                    IR_Table.GlowCache = nil
+                    IR_Table.HideCache = nil
                     InterruptReminder_Table.SelectedStyle = InterruptReminder_Table.Styles[names[i]]
                     IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
                     IR_Table:Show_Glow(glow_texture_test)
@@ -523,6 +527,8 @@ function IR_Table:CreateInterface(self)
                     check_and_uncheck_frames(checkboxes_copy, { checkboxes[i] })
                     hide_and_show_frames(hide_sliders, show_sliders)
                     IR_Table:Hide_Glow(glow_texture_test)
+                    IR_Table.GlowCache = nil
+                    IR_Table.HideCache = nil
                     InterruptReminder_Table.SelectedStyle = InterruptReminder_Table.Styles[names[i]]
                     IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
                     load_slider_data(load_data[i - 1])
@@ -891,19 +897,19 @@ function IR_Table:CreateInterface(self)
     about_mod_hover:SetScript("OnEnter", function()
         hide_and_show_frames({ save_button, refresh_button, cancel_button, proc_glow_checkbox,
                                glow_glow_checkbox, pixel_glow_checkbox, cast_glow_checkbox, glow_texture_test,
-                               r_slider, g_slider, b_slider, a_slider },
+                               r_slider, g_slider, b_slider, a_slider, horizontal_line_bottom },
                 { about_mod_frame })
     end)
     about_mod_hover:SetScript("OnLeave", function()
         if IR_Table.SelectedGlow.name == 'Proc' then
             hide_and_show_frames({ about_mod_frame }, { save_button, refresh_button, cancel_button,
                                                         proc_glow_checkbox, glow_glow_checkbox, pixel_glow_checkbox,
-                                                        cast_glow_checkbox, glow_texture_test })
+                                                        cast_glow_checkbox, glow_texture_test, horizontal_line_bottom })
         else
             hide_and_show_frames({ about_mod_frame }, { save_button, refresh_button, cancel_button,
                                                         proc_glow_checkbox, glow_glow_checkbox, pixel_glow_checkbox,
                                                         cast_glow_checkbox, glow_texture_test, r_slider, b_slider,
-                                                        g_slider, a_slider })
+                                                        g_slider, a_slider, horizontal_line_bottom })
         end
     end)
 
@@ -1100,8 +1106,16 @@ function IR_Table:FindSpellLocation(spell)
             find_button()
         end
     end
-    if IR_Table.ButtonCache[spell] == nil then find_button() else is_button_still_spell() end
-    if IR_Table.ButtonCache[spell] ~= nil then return IR_Table.ButtonCache[spell].button else return nil end
+    if IR_Table.ButtonCache[spell] == nil then
+        find_button()
+    else
+        is_button_still_spell()
+    end
+    if IR_Table.ButtonCache[spell] ~= nil then
+        return IR_Table.ButtonCache[spell].button
+    else
+        return nil
+    end
 end
 
 ---Retrieves the cooldown status of a list of spells and their corresponding location on the action bar(s).
@@ -1174,33 +1188,59 @@ function IR_Table:IsTargetCastingInterruptibleSpell()
 end
 
 function IR_Table:Show_Glow(frame)
-    local name = IR_Table.SelectedGlow.name
+    if not IR_Table.GlowCache then
+        local name = IR_Table.SelectedGlow.name
 
-    if name == 'Proc' then
-        LibCustomGlow.ProcGlow_Start(frame)
-    elseif name == 'Pixel' then
-        LibCustomGlow.PixelGlow_Start(frame, IR_Table.SelectedGlow.color,
-                IR_Table.SelectedGlow.N, nil, nil, IR_Table.SelectedGlow.thickness, nil, nil,
-                IR_Table.SelectedGlow.border)
-    elseif name == 'Cast' then
-        LibCustomGlow.AutoCastGlow_Start(frame, IR_Table.SelectedGlow.color,
-                IR_Table.SelectedGlow.N, IR_Table.SelectedGlow.frequency, IR_Table.SelectedGlow.scale)
+        if name == 'Proc' then
+            IR_Table.GlowCache = function()
+                LibCustomGlow.ProcGlow_Start(frame)
+            end
+        elseif name == 'Pixel' then
+            IR_Table.GlowCache = function()
+                LibCustomGlow.PixelGlow_Start(frame, IR_Table.SelectedGlow.color,
+                        IR_Table.SelectedGlow.N, nil, nil, IR_Table.SelectedGlow.thickness, nil, nil,
+                        IR_Table.SelectedGlow.border)
+            end
+        elseif name == 'Cast' then
+            IR_Table.GlowCache = function()
+                LibCustomGlow.AutoCastGlow_Start(frame, IR_Table.SelectedGlow.color,
+                        IR_Table.SelectedGlow.N, IR_Table.SelectedGlow.frequency, IR_Table.SelectedGlow.scale)
+            end
+        else
+            IR_Table.GlowCache = function()
+                LibCustomGlow.ButtonGlow_Start(frame, IR_Table.SelectedGlow.color, IR_Table.SelectedGlow.frequency)
+            end
+        end
+        IR_Table.GlowCache()
     else
-        LibCustomGlow.ButtonGlow_Start(frame, IR_Table.SelectedGlow.color, IR_Table.SelectedGlow.frequency)
+        IR_Table.GlowCache()
     end
 end
 
 function IR_Table:Hide_Glow(frame)
-    local name = IR_Table.SelectedGlow.name
+    if not IR_Table.HideCache then
+        local name = IR_Table.SelectedGlow.name
 
-    if name == 'Proc' then
-        LibCustomGlow.ProcGlow_Stop(frame)
-    elseif name == 'Pixel' then
-        LibCustomGlow.PixelGlow_Stop(frame)
-    elseif name == 'Cast' then
-        LibCustomGlow.AutoCastGlow_Stop(frame)
+        if name == 'Proc' then
+            IR_Table.HideCache = function()
+                LibCustomGlow.ProcGlow_Stop(frame)
+            end
+        elseif name == 'Pixel' then
+            IR_Table.HideCache = function()
+                LibCustomGlow.PixelGlow_Stop(frame)
+            end
+        elseif name == 'Cast' then
+            IR_Table.HideCache = function()
+                LibCustomGlow.AutoCastGlow_Stop(frame)
+            end
+        else
+            IR_Table.HideCache = function()
+                LibCustomGlow.ButtonGlow_Stop(frame)
+            end
+        end
+        IR_Table.HideCache()
     else
-        LibCustomGlow.ButtonGlow_Stop(frame)
+        IR_Table.HideCache()
     end
 end
 
