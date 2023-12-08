@@ -1,3 +1,14 @@
+## v2.1.0
+New Addition:
+
+    Highlight configurator! Can now select different configurations for the highlight of spells.
+    Three new highlight types for the spell highlight effect.
+    New library to handle the highlighting of spells.
+
+General Changes:
+
+    Frontend optimization where possible and fixing some race conditions in the frontend.
+
 ## v2.0.1
 New Addition:
 
