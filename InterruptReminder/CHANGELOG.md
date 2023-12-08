@@ -1,3 +1,9 @@
+## v2.1.1
+General Changes:
+
+    Removed Quaking Palm from the Monk class as it is a Pandaren racial skill.
+    Added new slash command /irconfig to quickly access the options menu.
+
 ## v2.1.0
 New Addition:
 

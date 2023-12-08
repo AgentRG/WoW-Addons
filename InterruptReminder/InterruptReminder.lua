@@ -1,4 +1,5 @@
 SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
+SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
 
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
@@ -68,7 +69,7 @@ local IR_Table = {
         ['Evoker'] = { 'Quell' },
         ['Hunter'] = { 'Counter Shot', 'Muzzle' },
         ['Mage'] = { 'Counterspell' },
-        ['Monk'] = { 'Spear Hand Strike', 'Quaking Palm' },
+        ['Monk'] = { 'Spear Hand Strike' },
         ['Paladin'] = { 'Rebuke', "Avenger's Shield" },
         ['Priest'] = { 'Silence' },
         ['Rogue'] = { 'Kick' },
@@ -148,9 +149,13 @@ end
 
 --- Slash command for information help.
 SlashCmdList.INTERRUPT_REMINDER_HELP = function()
-    printInfo("To view more options, head to Options → AddOns → Interrupt Reminder. The mod works by" ..
-            " highlighting spells that are interruptible by the target. If advanced spell selection is disabled in" ..
-            " the options, only spells that are for interrupting will be highlighted.")
+    printInfo("To view more options, head to Options → AddOns → Interrupt Reminder or typing /irconfig. The" ..
+            " mod works by highlighting your interrupt spell when the target is casting a spell that is interruptible.")
+end
+
+--- Slash command to open the options menu.
+SlashCmdList.INTERRUPT_REMINDER_OPTIONS = function()
+    InterfaceOptionsFrame_OpenToCategory(IR_Table.panel)
 end
 
 --- Remove duplicates in a table and return the table
