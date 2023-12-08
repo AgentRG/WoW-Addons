@@ -1135,19 +1135,21 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
         for i = 1, #spells_table do
             local spell = spells_table[i]
             local _, _, _, _, _, _, spellID = GetSpellInfo(spell)
-            local isInSpellbook = IsPlayerSpell(spellID)
-            if isInSpellbook then
-                local start, duration = GetSpellCooldown(spellID)
-                if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
-                    table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
-                else
-                    -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
-                    local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
-                    -- Safety check to ensure we don't save a negative number by mistake
-                    if calculatedTimeRemaining > 0 then
-                        -- Check that the spell will be ready before the spellcast from the target ends
-                        if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
-                            table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = IR_Table:FindSpellLocation(spell) })
+            if type(spellID) == 'number' then
+                local isInSpellbook = IsPlayerSpell(spellID)
+                if isInSpellbook then
+                    local start, duration = GetSpellCooldown(spellID)
+                    if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
+                        table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
+                    else
+                        -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
+                        local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
+                        -- Safety check to ensure we don't save a negative number by mistake
+                        if calculatedTimeRemaining > 0 then
+                            -- Check that the spell will be ready before the spellcast from the target ends
+                            if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
+                                table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = IR_Table:FindSpellLocation(spell) })
+                            end
                         end
                     end
                 end
@@ -1188,59 +1190,59 @@ function IR_Table:IsTargetCastingInterruptibleSpell()
 end
 
 function IR_Table:Show_Glow(frame)
-    if not IR_Table.GlowCache then
+    if IR_Table.GlowCache == nil then
         local name = IR_Table.SelectedGlow.name
 
         if name == 'Proc' then
-            IR_Table.GlowCache = function()
-                LibCustomGlow.ProcGlow_Start(frame)
+            IR_Table.GlowCache = function(frame_loc)
+                LibCustomGlow.ProcGlow_Start(frame_loc)
             end
         elseif name == 'Pixel' then
-            IR_Table.GlowCache = function()
-                LibCustomGlow.PixelGlow_Start(frame, IR_Table.SelectedGlow.color,
+            IR_Table.GlowCache = function(frame_loc)
+                LibCustomGlow.PixelGlow_Start(frame_loc, IR_Table.SelectedGlow.color,
                         IR_Table.SelectedGlow.N, nil, nil, IR_Table.SelectedGlow.thickness, nil, nil,
                         IR_Table.SelectedGlow.border)
             end
         elseif name == 'Cast' then
-            IR_Table.GlowCache = function()
-                LibCustomGlow.AutoCastGlow_Start(frame, IR_Table.SelectedGlow.color,
+            IR_Table.GlowCache = function(frame_loc)
+                LibCustomGlow.AutoCastGlow_Start(frame_loc, IR_Table.SelectedGlow.color,
                         IR_Table.SelectedGlow.N, IR_Table.SelectedGlow.frequency, IR_Table.SelectedGlow.scale)
             end
         else
-            IR_Table.GlowCache = function()
-                LibCustomGlow.ButtonGlow_Start(frame, IR_Table.SelectedGlow.color, IR_Table.SelectedGlow.frequency)
+            IR_Table.GlowCache = function(frame_loc)
+                LibCustomGlow.ButtonGlow_Start(frame_loc, IR_Table.SelectedGlow.color, IR_Table.SelectedGlow.frequency)
             end
         end
-        IR_Table.GlowCache()
+        IR_Table.GlowCache(frame)
     else
-        IR_Table.GlowCache()
+        IR_Table.GlowCache(frame)
     end
 end
 
 function IR_Table:Hide_Glow(frame)
-    if not IR_Table.HideCache then
+    if IR_Table.HideCache == nil then
         local name = IR_Table.SelectedGlow.name
 
         if name == 'Proc' then
-            IR_Table.HideCache = function()
-                LibCustomGlow.ProcGlow_Stop(frame)
+            IR_Table.HideCache = function(frame_loc)
+                LibCustomGlow.ProcGlow_Stop(frame_loc)
             end
         elseif name == 'Pixel' then
-            IR_Table.HideCache = function()
-                LibCustomGlow.PixelGlow_Stop(frame)
+            IR_Table.HideCache = function(frame_loc)
+                LibCustomGlow.PixelGlow_Stop(frame_loc)
             end
         elseif name == 'Cast' then
-            IR_Table.HideCache = function()
-                LibCustomGlow.AutoCastGlow_Stop(frame)
+            IR_Table.HideCache = function(frame_loc)
+                LibCustomGlow.AutoCastGlow_Stop(frame_loc)
             end
         else
-            IR_Table.HideCache = function()
-                LibCustomGlow.ButtonGlow_Stop(frame)
+            IR_Table.HideCache = function(frame_loc)
+                LibCustomGlow.ButtonGlow_Stop(frame_loc)
             end
         end
-        IR_Table.HideCache()
+        IR_Table.HideCache(frame)
     else
-        IR_Table.HideCache()
+        IR_Table.HideCache(frame)
     end
 end
 
