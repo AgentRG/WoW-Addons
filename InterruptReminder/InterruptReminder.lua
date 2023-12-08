@@ -262,7 +262,6 @@ local function get_spellbook_spells()
 
         for spellIndex = offset + 1, offset + numSpells do
             local spellName, _, spellId = GetSpellBookItemName(spellIndex, BOOKTYPE_SPELL)
-
             if spellName and not tContains(extraneousSpells, spellName) then
                 local spell = Spell:CreateFromSpellID(spellId)
 
@@ -383,8 +382,7 @@ local function get_bosses()
             end
         end
     end
-    printDebug("get_bosses: Boss list now consists of: " .. table.concat(copy, ","))
-    InterruptReminder_Table.CurrentBossList = copy
+    printDebug("get_bosses: Boss list now consists of: " .. table.concat(InterruptReminder_Table, ","))
 end
 
 ---Keep the boss list at the capacity of 30
@@ -397,7 +395,6 @@ local function truncate_boss_list()
         end
         printDebug("truncate_boss_list: Truncate boss list by " .. inserts .. ".")
     end
-    InterruptReminder_Table.CurrentBossList = copy
 end
 
 ---Options frame
@@ -1006,7 +1003,7 @@ function IR_Table:GetAllCrowdControlSpells(self)
     copy = get_spellbook_spells()
     local specialization_spells = get_specialization_spells()
     if specialization_spells ~= nil then
-        copy = merge_two_tables(copy, get_specialization_spells())
+        copy = merge_two_tables(copy, specialization_spells)
     end
     copy = remove_duplicates_from_nested_table(copy, 'spellName')
     self.Spells = copy
