@@ -1,6 +1,7 @@
 local addonName, addonData = ...
 
--- Taken from https://www.wowinterface.com/forums/showthread.php?t=55149
+-- Global font names taken from https://www.wowinterface.com/forums/showthread.php?t=55149
+-- Runescape font taken from Runelite client GitHub repo https://github.com/runelite/runelite/tree/master/runelite-client/src/main/resources/net/runelite/client/ui
 function addonData:Init_Fonts()
     local newFont = "Interface\\AddOns\\RunescapeOverhaul\\Resources\\Fonts\\runescape.ttf"
 

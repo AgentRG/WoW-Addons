@@ -4,5 +4,6 @@
 ## Author: AgentRG
 
 Fonts.lua
+Music.lua
 
 Core.lua
