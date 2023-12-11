@@ -2,7 +2,9 @@
 ## Version: 1.0.0
 ## Title: Runescape Overhaul
 ## Author: AgentRG
+## SavedVariablesPerCharacter: RO_Table
 
+Options.lua
 Fonts.lua
 Music.lua
 
