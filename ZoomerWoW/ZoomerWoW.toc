@@ -1,0 +1,6 @@
+## Interface: 100200
+## Version: 1.0.0
+## Title: Zoomer WoW
+## Author: AgentRG
+
+ZoomerWoW.lua
