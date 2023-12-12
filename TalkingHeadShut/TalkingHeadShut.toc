@@ -1,0 +1,7 @@
+## Interface: 100200
+## Version: 1.0.0
+## Title: Talking Head Shut
+## Author: AgentRG
+## IconTexture: Interface\AddOns\TalkingHeadShut\icon.png
+
+TalkingHeadShut.lua
