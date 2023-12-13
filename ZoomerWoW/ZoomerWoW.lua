@@ -1,6 +1,5 @@
 local gossip_frame = CreateFrame("Frame", "ZoomerWoW")
 local ready = false
-local quest_greeting = GreetingText
 local mapping_table = {
     ['family'] = 'fam',
     ['transform'] = 'glow up',
@@ -110,7 +109,8 @@ local mapping_table = {
     ['warning'] = 'red flag',
     ['kill'] = 'slay',
     ['friend'] = 'fam',
-    ['have'] = 'haz'
+    ['have'] = 'haz',
+    ['welcome'] = 'yoooooo',
 }
 
 local function process_text(input_text)
@@ -125,17 +125,39 @@ local function process_text(input_text)
     return table.concat(result, ' ')
 end
 
+local function get_process_set_text()
+    local text
+    local frame
+    if GreetingText:IsVisible() then
+        text = GreetingText:GetText()
+        frame = GreetingText
+    elseif GossipFrame.GreetingPanel:IsVisible() then
+        local child_frames = {GossipFrame.GreetingPanel.ScrollBox.ScrollTarget:GetChildren()}
+        for _, v in ipairs(child_frames) do
+            local child_child_frames = {v:GetChildren()}
+            for _, vv in ipairs(child_child_frames) do
+                if vv:GetDebugName() == 'GreetingText' then
+                    frame = GossipFrame.GreetingPanel.ScrollBox.ScrollTarget[v:GetDebugName()][vv:GetDebugName()]
+                end
+            end
+        end
+    end
+    if text ~= nil then
+        text = process_text(text)
+        frame:SetText(text)
+    end
+end
+
+
 gossip_frame:RegisterEvent('ADDON_LOADED')
 gossip_frame:RegisterEvent('GOSSIP_SHOW')
 gossip_frame:RegisterEvent('QUEST_GREETING')
 gossip_frame:RegisterEvent('PLAYER_INTERACTION_MANAGER_FRAME_SHOW')
 
-gossip_frame:SetScript('OnEvent', function(self, event, arg1)
-    if event == 'GOSSIP_SHOW' or event == 'QUEST_GREETING' or (event == 'PLAYER_INTERACTION_MANAGER_FRAME_SHOW.3'
+gossip_frame:SetScript('OnEvent', function(_, event, arg1)
+    if event == 'GOSSIP_SHOW' or event == 'QUEST_GREETING' or (event == 'PLAYER_INTERACTION_MANAGER_FRAME_SHOW'
             and (arg1 == 3 or arg1 == 4)) and ready then
-        local text = quest_greeting:GetText()
-        local processed_text = process_text(text)
-        quest_greeting:SetText(processed_text)
+        get_process_set_text()
     end
     if event == 'ADDON_LOADED' and arg1 == "ZoomerWoW" then
         ready = true
