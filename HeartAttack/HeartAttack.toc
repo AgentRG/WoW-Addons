@@ -1,9 +1,9 @@
 ## Interface: 100205
-## Version: 1.0.2
+## Version: 1.0.3
 ## Title: Heart Attack
 ## Author: AgentRG
 ## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_GlobalTable
 ## AddonCompartmentFunc: HeartAttack_OnAddonCompartmentClick
-## IconTexture: Interface\AddOns\HeartAttack\Resources\spell_brokenheart.png
+## IconTexture: Interface\AddOns\HeartAttack\Resources\thumbnail.png
 
 HeartAttack.lua
