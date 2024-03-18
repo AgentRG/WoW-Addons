@@ -9,4 +9,5 @@
 
 Libs\LibCustomGlow-1.0\LibStub\LibStub.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+Libs\LibFramePool-1.0\LibFramePool-1.0.lua
 InterruptReminder.lua
