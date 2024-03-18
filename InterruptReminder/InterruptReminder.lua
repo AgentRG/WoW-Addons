@@ -6,7 +6,6 @@ local IR_Table = {
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
                    'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
-    -- Pool of frames that will contain the check buttons that the player wants checked in the options interface
     ElvUIActionBars = { 'ElvUI_Bar1Button', 'ElvUI_Bar2Button', 'ElvUI_Bar3Button', 'ElvUI_Bar4Button',
                         'ElvUI_Bar5Button', 'ElvUI_Bar6Button', 'ElvUI_Bar7Button', 'ElvUI_Bar8Button',
                         'ElvUI_Bar9Button', 'ElvUI_Bar10Button', 'ElvUI_Bar13Button', 'ElvUI_Bar14Button',
