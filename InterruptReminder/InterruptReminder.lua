@@ -3,8 +3,6 @@ SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
 
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
-    -- Pool of frames that will contain the check buttons that the player wants checked in the options interface
-    CheckButtonFramePool = {},
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
                    'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
@@ -94,9 +92,12 @@ local IR_Table = {
 local f = CreateFrame('Frame', 'InterruptReminder')
 local PlayerClass = UnitClass('player')
 local PlayerRace = UnitRace('player')
+local CheckButtonFramePool
+
 
 -- Library used to highlight spells. Without the library, the addon will encounter protected action access error
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
+local LibFramePool = LibStub("LibFramePool-1.0")
 
 -- Local version of WoW global functions for slightly faster runtime access
 local GetActionInfo = GetActionInfo
@@ -435,24 +436,22 @@ function IR_Table:CreateInterface(self)
 
     --- Create 30 checkboxes to be used
     local function create_checkboxes(frame)
+        CheckButtonFramePool = LibFramePool:CreateFramePool(30, "CheckButton", {nil, frame, "ChatConfigCheckButtonTemplate"})
+        LibFramePool:SetOnClickScript(CheckButtonFramePool, function()
+            if IR_Table.SaveHidden == true then
+                save_warning_text:Show()
+                IR_Table.SaveHidden = false
+            end
+        end)
         local x, y, r = 8, -50, 0
 
         for i = 1, 30 do
-            IR_Table.CheckButtonFramePool[#IR_Table.CheckButtonFramePool + 1] = { frame = CreateFrame("CheckButton",
-                    nil, frame, "ChatConfigCheckButtonTemplate") }
-            IR_Table.CheckButtonFramePool[i].frame:Hide()
             if r == 3 then
                 y = y - 20
                 x = 8
                 r = 0
             end
-            IR_Table.CheckButtonFramePool[i].frame:SetScript("OnClick", function()
-                if IR_Table.SaveHidden == true then
-                    save_warning_text:Show()
-                    IR_Table.SaveHidden = false
-                end
-            end)
-            IR_Table.CheckButtonFramePool[i].frame:SetPoint("TOPLEFT", x, y)
+            CheckButtonFramePool[i].frame:SetPoint("TOPLEFT", x, y)
             x = x + 200
             r = r + 1
         end
@@ -698,7 +697,7 @@ function IR_Table:CreateInterface(self)
             for i = 1, #spells do
                 local spell_name = spells[i].spellName
                 local spell_description = spells[i].description
-                local checkbox = IR_Table.CheckButtonFramePool[i].frame
+                local checkbox = CheckButtonFramePool[i].frame
                 checkbox.Text:SetText(spell_name)
                 checkbox.tooltip = spell_description
                 if tContains(checkedSpells, spell_name) then
@@ -719,7 +718,7 @@ function IR_Table:CreateInterface(self)
         local endIteration = #spells + 1
 
         for i = 1, #spells do
-            local checkbox = IR_Table.CheckButtonFramePool[i].frame
+            local checkbox = CheckButtonFramePool[i].frame
             local spell_name = spells[i].spellName
             local spell_description = spells[i].description
             checkbox.Text:SetText(spell_name)
@@ -733,7 +732,7 @@ function IR_Table:CreateInterface(self)
             checkbox:Show()
         end
         for i = endIteration, 30 do
-            local checkbox = IR_Table.CheckButtonFramePool[i].frame
+            local checkbox = CheckButtonFramePool[i].frame
             checkbox:Hide()
             checkbox:SetChecked(false)
         end
@@ -744,7 +743,7 @@ function IR_Table:CreateInterface(self)
         self.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
         IR_Table.SelectedSpells = self.selectedSpells
         for i = 1, 30 do
-            local checkbox = IR_Table.CheckButtonFramePool[i].frame
+            local checkbox = CheckButtonFramePool[i].frame
 
             checkbox:Hide()
             checkbox:SetChecked(false)
@@ -810,7 +809,7 @@ function IR_Table:CreateInterface(self)
         local copy = {}
 
         for i = 1, 30 do
-            local checkbox = IR_Table.CheckButtonFramePool[i].frame
+            local checkbox = CheckButtonFramePool[i].frame
             local check_status = checkbox:GetChecked()
             if check_status == true then
                 copy[#copy + 1] = checkbox.Text:GetText()
