@@ -1,6 +1,3 @@
-SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
-SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
-
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
     -- WoW default action bar names
@@ -148,14 +145,17 @@ local function printDebug(text)
     end
 end
 
+SLASH_INTERRUPT_REMINDER_HELP1 = "/irhelp"
+
 --- Slash command for information help.
-SlashCmdList.INTERRUPT_REMINDER_HELP = function()
+SlashCmdList['INTERRUPT_REMINDER_HELP'] = function()
     printInfo("To view more options, head to Options → AddOns → Interrupt Reminder or typing /irconfig. The" ..
             " mod works by highlighting your interrupt spell when the target is casting a spell that is interruptible.")
 end
 
+SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
 --- Slash command to open the options menu.
-SlashCmdList.INTERRUPT_REMINDER_OPTIONS = function()
+SlashCmdList['INTERRUPT_REMINDER_OPTIONS'] = function()
     InterfaceOptionsFrame_OpenToCategory(IR_Table.panel)
 end
 
