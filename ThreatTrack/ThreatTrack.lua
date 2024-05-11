@@ -343,10 +343,24 @@ local function is_player_in_group_or_raid()
 end
 
 local function get_enemy_nameplates()
+
+    local function FindUnitFromVisibleNameplates(guid)
+        local nameplates = C_NamePlate.GetNamePlates(false)
+        for _, nameplateTable in ipairs(nameplates) do
+            if UnitGUID(nameplateTable.namePlateUnitToken) == guid then
+                return nameplateTable.namePlateUnitToken
+            end
+        end
+        return nil
+    end
+
     local guidCopy = guidTable
     for _, unitData in pairs(guidCopy) do
         local unitGuid = unitData[1]
-        local unitToken = UnitTokenFromGUID(unitGuid)
+        local unitToken
+        if not pcall(function() unitToken = UnitTokenFromGUID(unitGuid) end) then --Capture unitToken in retail
+            unitToken = FindUnitFromVisibleNameplates(unitGuid) --Capture unitToken in classic clients
+        end
         local unitName = unitData[2]
 
         if enemyNameplates[unitGuid] ~= nil then
