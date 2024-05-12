@@ -6,22 +6,8 @@ interrupts.
 
 ## Features
 * Real-time tracking of a target's spell casting and providing World of Warcraft's actionbar glow effect to spells
-who's primarily function is to cause an interrupt. The spell being tracked are as followed:
-  * Death Knight: Mind Freeze, Asphyxiate, Strangulate, Death Grip
-  * Demon Hunter: Disrupt 
-  * Druid: Skull Bash, Solar Beam 
-  * Evoker: Quell 
-  * Hunter: Counter Shot, 'Muzzle 
-  * Mage: Counterspell 
-  * Monk: Spear Hand Strike, Quaking Palm
-  * Paladin: Rebuke, Avenger's Shield 
-  * Priest: Silence 
-  * Rogue: Kick 
-  * Shaman: Wind Shear 
-  * Warlock: Spell Lock, Optical Blast, Axe Toss 
-  * Warrior: Pummel
-
+who's primarily function is to cause an interrupt.
 * Optional opt-in into additional tracking of any spell capable of applying a Crowd Control affect (also interrupting)
 by going to the options menu and enabling "Enable Advanced Spell Selection".
   * Smart algorithm runs in the background with passing accuracy do determine whether the target of the spell is susceptible to crowd control spells.
-* Custom, mostly configurable highlights of 4 varieties.
+* Custom, mostly configurable highlights of 4 varieties (3 for Cataclysm).
