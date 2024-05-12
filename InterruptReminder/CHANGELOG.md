@@ -1,3 +1,14 @@
+## v2.2.0
+New Addition:
+    
+    Sound cue option is now available in the add-on options menu.
+    Support for Classic Cataclysm (No ElvUI support with Cataclysm).
+
+Bug Fixes:
+
+    Humans never get any love. Fixed a bug that prevented the mod from being used for Human race.
+
+
 ## v2.1.1
 General Changes:
 
