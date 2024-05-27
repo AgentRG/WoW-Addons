@@ -359,7 +359,6 @@ function HA_Table.handle_player_entering_world()
     initial_world_load = false
     if HeartAttack_FirstTimeDone == nil then
         HeartAttack_GlobalTable = {}
-        HeartAttack_GlobalTable.HeartAttack_FirstTimeDone = true            -- First time launch flag to determine if add-on launched first time
         HeartAttack_GlobalTable.HeartAttack_Debug = false                   -- Debug flag
         HeartAttack_GlobalTable.HeartAttack_EventLock = false               -- When the main function to determine if heart attack will occur runs, lock event collection
         HeartAttack_GlobalTable.HeartAttack_GameOver = false                -- Flag to check if the heart attack has occurred to stop any add-on activity
@@ -367,6 +366,7 @@ function HA_Table.handle_player_entering_world()
         HeartAttack_GlobalTable.HeartAttack_MaxVal = HA_MaxVal              -- Initial value for heart attack calculation. Gets smaller with each appropriate event triggered.
         HeartAttack_GlobalTable.HeartAttack_StartTime = time()              -- Save the initial start time of the add-on. Used at the very end to calculate how long the player lived.
         HeartAttack_GlobalTable.HeartAttack_24HoursStart = time()           -- Used for natural degradation of HeartAttack_MaxVal
+        HeartAttack_FirstTimeDone = true                                    -- First time launch flag to determine if add-on launched first time
         printInfo('First time? Type /hahelp for more information.')
     end
     --Every 10 minutes, trigger roll_heart_attack_chance to see if the player will experience a heart attack
