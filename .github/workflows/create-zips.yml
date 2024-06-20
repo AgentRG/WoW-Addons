@@ -44,7 +44,8 @@ jobs:
           files+=("$item")
           fi
           done
-          echo "$files"
+          echo "${files[@]}"
+          echo
           cd ..
           done
           
