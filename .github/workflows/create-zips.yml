@@ -50,11 +50,9 @@ jobs:
             mv "$zip_name" ../.github
             cd ..
           done
-          cd .github
-          ls -la
-          cd ..
       - name: Push ZIPs to repo
         run: |
+          cd .github
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git add .
