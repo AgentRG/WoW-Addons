@@ -37,10 +37,8 @@ jobs:
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
           for folder in "${folders[@]}"; do
           cd "$folder"
-          toc_version=$(head -n2 *.toc | tail -n1)
+          toc_version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
           echo "$toc_version"
-          zip_version=$(IFS=" " read pound version number <<< "$toc_version")
-          echo "$number"
           for item in "."/*; do
           if [[ "$item" != "./_misc" ]]; then
           echo
