@@ -41,12 +41,13 @@ jobs:
             version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
             zip_name="${folder}_v${version}.zip"
             for item in "."/*; do
-              if [[ "$item" != "./_misc" ]]; then
+              if [[ "$item" != "./_misc" && "$item" != "./*.zip" ]]; then
                 files+=("$item")
               fi
             done
             echo "$zip_name"
             zip -qr "$zip_name" "${files[@]}"
+            mv "$zip_name" ../.github
             cd ..
           done
           
