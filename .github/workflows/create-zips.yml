@@ -38,8 +38,10 @@ jobs:
           for folder in "${folders[@]}"; do
           cd "$folder"
           for item in "."/*; do
+          if [[ "$item" != "./_misc" ]]; then
           echo "$item"
-          cd ..
+          fi
           done
+          cd ..
           done
           
