@@ -37,9 +37,9 @@ jobs:
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
           for folder in "${folders[@]}"; do
             files=()
-            cd "$folder"
+            cd "${folder}"
             version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
-            zip_name="$folder_v$version.zip"
+            zip_name="${folder}_v${version}.zip"
             for item in "."/*; do
               if [[ "$item" != "./_misc" ]]; then
                 files+=("$item")
