@@ -50,4 +50,8 @@ jobs:
             mv "$zip_name" ../.github
             cd ..
           done
+      - name: create pull request
+        run: gh pr create -B main -H branch_to_merge --title 'Merge branch_to_merge into main' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
