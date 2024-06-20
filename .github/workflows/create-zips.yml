@@ -45,8 +45,8 @@ jobs:
                 files+=("$item")
               fi
             done
-            echo "$zip_name"
-            zip -qr "$zip_name" "${files[@]}"
+            zip -r "$zip_name" "${files[@]}"
+            echo "Created zip file $zip_name"
             mv "$zip_name" ../.github
             cd ..
           done
