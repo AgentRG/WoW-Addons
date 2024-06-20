@@ -44,7 +44,7 @@ jobs:
           files+=("$item")
           fi
           done
-          zip -r "$folder_v$version" -@ < "$files"
+          echo "$files"
           cd ..
           done
           
