@@ -59,9 +59,14 @@ jobs:
           done
       - name: Push ZIPs to repo
         run: |
+          branch_name=$(date +"%d-%b-%Y-%H-%M-%S")
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
+          git checkout -b "zips_$branch_name"
           git add _zips/*
           git commit -m "Committed ZIP folders"
-          git push -u origin main
+          git push -u origin "zips_$branch_name"
+          gh pr create -B main -H "zips_$branch_name" --title 'Merge zips_$branch_name into main' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
