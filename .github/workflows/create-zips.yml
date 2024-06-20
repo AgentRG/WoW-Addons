@@ -36,6 +36,7 @@ jobs:
 
       - name: Delete contents of _zips
         run: |
+          ls -la
           rm -r ./_zips/*
 
       # Runs a set of commands using the runners shell
