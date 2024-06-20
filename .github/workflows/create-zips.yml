@@ -4,9 +4,17 @@ name: CI
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # Triggers the workflow on push event but only for the "main" branch
   push:
     branches: [ "main" ]
+    paths:
+      - 'HeartAttack/**'
+      - 'HumorousDeath/**'
+      - 'InterruptReminder/**'
+      - 'LibFramePool-1.0/**'
+      - 'TalkingHeadShut/**'
+      - 'ThreatTrack/**'
+      - 'ZoomerWoW/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -23,12 +31,16 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
+          cd ..
+          for folder in "${folders[@]}"; do
+          cd "$folder"
+          for item in "."/*; do
+          echo "$item"
+          cd ..
+          end
+          end
+          
