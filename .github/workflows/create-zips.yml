@@ -35,6 +35,7 @@ jobs:
       - name: Run a multi-line script
         run: |
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
+          echo $(ls -la)
           cd ..
           for folder in "${folders[@]}"; do
           cd "$folder"
