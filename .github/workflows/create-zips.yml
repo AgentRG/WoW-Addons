@@ -36,17 +36,17 @@ jobs:
         run: |
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
           for folder in "${folders[@]}"; do
-          cd "$folder"
-          version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
-          files=()
-          for item in "."/*; do
-          if [[ "$item" != "./_misc" ]]; then
-          files+=("$item")
-          fi
-          done
-          zip_name="$folder_v$version.zip"
-          echo "$zip_name"
-          zip -r "$zip_name" "${files[@]}"
-          cd ..
+            files=()
+            cd "$folder"
+            version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
+            zip_name="$folder_v$version.zip"
+            for item in "."/*; do
+              if [[ "$item" != "./_misc" ]]; then
+                files+=("$item")
+              fi
+            done
+            echo "$zip_name"
+            zip -qr "$zip_name" "${files[@]}"
+            cd ..
           done
           
