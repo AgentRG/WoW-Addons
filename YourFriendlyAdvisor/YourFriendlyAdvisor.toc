@@ -1,0 +1,6 @@
+## Interface: 100207
+## Version: 1.0.0
+## Title: Your Friendly Advisor
+## Author: AgentRG
+
+YourFriendlyAdvisor.lua
