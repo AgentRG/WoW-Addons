@@ -1,5 +1,5 @@
 # WoW-Addons
-Repo for WoW addons that I have developed.
+Repo for WoW addons that I have developed. This repo uses GitHub Actions to automatically create the ZIP files under `_zips` when changes are merged to main branch.
 
 
 * [Interrupt Reminder](InterruptReminder) - Highlight the class' interrupt abilities when the target is casting or channeling a spell that can
