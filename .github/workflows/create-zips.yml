@@ -44,7 +44,9 @@ jobs:
           files+=("$item")
           fi
           done
-          zip -r "$folder_v$version".zip "${files[@]}"
+          zip_name="$folder_v$version.zip"
+          echo "$zip_name"
+          zip -r "$zip_name" "${files[@]}"
           cd ..
           done
           
