@@ -52,7 +52,7 @@ jobs:
           done
       - name: Push ZIPs to repo
         run: |
-          cd .github
+          ls -la
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git add .
