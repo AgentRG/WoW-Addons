@@ -36,15 +36,22 @@ jobs:
         run: |
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
           for folder in "${folders[@]}"; do
-          cd "$folder"
-          version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
-          files=()
-          for item in "."/*; do
-          if [[ "$item" != "./_misc" ]]; then
-          files+=("$item")
-          fi
+            files=()
+            cd "${folder}"
+            version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
+            zip_name="${folder}_v${version}.zip"
+            for item in "."/*; do
+              if [[ "$item" != "./_misc" && "$item" != "./*.zip" ]]; then
+                files+=("$item")
+              fi
+            done
+            zip -r "$zip_name" "${files[@]}"
+            echo "Created zip file $zip_name"
+            mv "$zip_name" ../.github
+            cd ..
           done
-          zip -r "$folder_v$version" -@ < "$files"
-          cd ..
-          done
+      - name: create pull request
+        run: gh pr create -B main -H branch_to_merge --title 'Merge branch_to_merge into main' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
