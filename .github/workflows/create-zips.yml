@@ -37,6 +37,7 @@ jobs:
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
           echo $(ls -la)
           cd ..
+          echo $(ls -la)
           for folder in "${folders[@]}"; do
           cd "$folder"
           for item in "."/*; do
