@@ -41,7 +41,7 @@ jobs:
 
   test1:
     needs: build
-    if: ${{ steps.filter.outputs.test == 'true' }}
+    if: ${{ needs.build.outputs.test == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: hello
