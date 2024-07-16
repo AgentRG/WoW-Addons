@@ -36,7 +36,7 @@ jobs:
         with:
           filters: |
             test:
-              - 'test_folder/**'
+              - 'HeartAttack/**'
             
 
   test1:
