@@ -38,5 +38,14 @@ jobs:
             test:
               - 'test_folder/**'
             
+
+  test1:
+    needs: build
+    if: ${{ steps.filter.outputs.test == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: hello
+        run: echo "Hello!"
+            
       
           
