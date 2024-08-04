@@ -10,18 +10,45 @@ local mapping_table = {
         ['for real'] = 'fr',
         ['show off'] = 'flex',
         ['are the'] = 'be',
+        ['over with'] = 'ratioed',
         ['really use'] = 'crazy use',
+        ['looking for you'] = 'malding',
+        ['best friend'] = 'bestie',
+        ['step forward'] = 'pull up',
         ['i understand'] = 'say less',
         ['call out'] = 'clapback',
-        ['trying to'] = 'tryna'
+        ["don't know"] = 'dunno',
+        ['trying to'] = 'tryna',
+        ['shut up'] = "quit yappin'",
+        ['wrong with him'] = 'got bro down'
     },
     single_words = {
         ['i'] = 'ya boi',
+        ['cross'] = 'hop',
         ['specialist'] = 'spesh',
         ['skills'] = 'skillz',
         ['skill'] = 'skillz',
         ["you'll"] = 'u',
+        ['home'] = 'Ohio',
+        ['place'] = 'Ohio',
+        ['she'] = 'step-sister',
+        ['places'] = 'Ohios',
+        ['city'] = 'Ohio',
+        ['village'] = 'gooncave',
+        ['heaven'] = 'Kai Cenant',
         ['about'] = 'bout',
+        ['stole'] = 'copped',
+        ['stop'] = 'edge',
+        ['archer'] = 'pogger',
+        ['archers'] = 'poggers',
+        ['stopping'] = 'edging',
+        ['line'] = 'grind',
+        ['courage'] = 'aura',
+        ['mistake'] = 'cap',
+        ['step'] = 'griddy',
+        ['call'] = 'shill',
+        ['honor'] = 'GOATED fr',
+        ['horse'] = 'whip',
         ["he's"] = 'he be',
         ['family'] = 'fam',
         ['transform'] = 'glow up',
@@ -29,7 +56,13 @@ local mapping_table = {
         ['master'] = 'CEO',
         ['professor'] = 'CEO',
         ['boss'] = 'CEO',
+        ['soldier'] = 'simp',
+        ['soldiers'] = 'simps',
+        ['brothers'] = 'gooners',
+        ['brother'] = 'gooner',
+        ['trying'] = "tryin'",
         ['fan'] = 'stan',
+        ['father'] = 'Alpha',
         ['please'] = 'plz',
         ['stalker'] = 'stan',
         ['observer'] = 'stan',
@@ -47,6 +80,7 @@ local mapping_table = {
         ['evil'] = 'big yikes',
         ['embarrassed'] = 'big yikes',
         ['fancy'] = 'boujee',
+        ['awake'] = 'woke',
         ['extravagant'] = 'boujee',
         ['lie'] = 'cap',
         ['attractive'] = 'snack',
@@ -55,12 +89,18 @@ local mapping_table = {
         ['losing'] = "L'ing",
         ["i'm"] = "i'ma",
         ['looking'] = "lookin'",
-        ['good'] = 'bop',
+        ['king'] = 'short king',
+        ['good'] = 'based',
         ['stylish'] = 'drip',
         ['*sigh*'] = 'sheesh',
         ['sigh'] = 'sheesh',
+        ['rebels'] = 'rizzlers',
+        ['rebellion'] = 'rizz-bellion',
+        ['captured'] = 'copped',
+        ['capture'] = 'cop',
         ['mad'] = 'living rent free in my head',
         ['yes'] = 'bet',
+        ['offensive'] = 'big yikes',
         ['agree'] = 'bet',
         ['agreed'] = 'bet',
         ['okay'] = 'bet',
@@ -73,8 +113,7 @@ local mapping_table = {
         ['charismatic'] = 'main character',
         ['charm'] = 'rizz',
         ['charisma'] = 'main character syndrome',
-        ['sister'] = 'sis',
-        ['brother'] = 'bro',
+        ['sister'] = 'step-sister',
         ['funny'] = 'sending me',
         ['amazing'] = 'slaps',
         ['amaze'] = 'slap',
@@ -82,6 +121,7 @@ local mapping_table = {
         ['delicious'] = "bussin'",
         ['suspicious'] = 'sus',
         ['suspect'] = 'sus',
+        ['speaking'] = 'yapping',
         ['untrustworthy'] = 'sus',
         ['shady'] = 'sus',
         ['outfit'] = 'snatched',
@@ -91,6 +131,7 @@ local mapping_table = {
         ['tiny'] = 'smol',
         ['greatest'] = 'G.O.A.T',
         ['hey'] = 'suh',
+        ['impressive'] = 'banger',
         ['hello'] = 'suh',
         ['family'] = 'fam',
         ['embarrassing '] = 'big yikes',
@@ -112,26 +153,44 @@ local mapping_table = {
         ['acceptable'] = 'valid',
         ['throw'] = 'yeet',
         ['uncool'] = 'cheugy',
+        ['nice'] = 'chill',
         ['fierce'] = 'snatched',
         ['quite'] = 'low-key',
+        ['go'] = 'goon',
         ['moderate'] = 'low-key',
         ['there'] = 'thar',
         ['my'] = 'ma',
         ['opinion'] = 'take',
+        ['taking'] = 'thug-shaking',
         ['ouch'] = 'big yikes',
         ['dramatic'] = 'extra',
         ['positive'] = 'green flag',
         ['desire'] = 'goal',
         ['woman'] = 'girlboss',
+        ['girl'] = 'gyatt',
+        ['run'] = 'edge',
+        ['running'] = 'edging',
         ['very'] = 'highkey',
         ['warning'] = 'red flag',
         ['kill'] = 'slay',
+        ['ambush'] = 'mog',
+        ['boy'] = 'femboy',
+        ['mixed'] = 'maxxed',
+        ['walked'] = 'griddied',
         ['friend'] = 'fam',
         ['have'] = 'haz',
+        ['came'] = 'rizzed',
         ['welcome'] = 'yoooooo',
-        ['you'] = 'ya',
+        ['allies'] = 'rizzlers',
+        ['ally'] = 'rizzler',
+        ['you'] = 'mew',
+        ['the'] = 'thar',
         ['and'] = 'n',
+        ['dad'] = 'daddy',
+        ['damn'] = 'fanum',
+        ['thief'] = 'beta',
         ['your'] = 'ur',
+        ['safe'] = 'locked-in',
         ['are'] = 'be',
         ['sad'] = 'salty',
         ['grieve'] = 'salty'
@@ -196,29 +255,34 @@ end
 local function get_process_set_text()
     local text
     local frame
-    if GreetingText:IsVisible() then
-        text = GreetingText:GetText()
-        frame = GreetingText
-    elseif GossipFrame.GreetingPanel:IsVisible() then
-        text = C_GossipInfo.GetText()
-        local parentFrame = GossipFrame.GreetingPanel.ScrollBox.ScrollTarget
-        for _, region in ipairs({parentFrame:GetChildren()}) do
-            if region:GetObjectType() == 'Frame' then
-                for _, region_2 in ipairs({region:GetRegions()}) do
-                    if region_2:GetObjectType() == "FontString" and region_2:GetText() then
-                        frame = region_2
-                        break
+    if C_AddOns.IsAddOnLoaded("Immersion") == true then
+        text = ImmersionFrame.TalkBox.TextFrame.Text:GetLine()
+        frame = ImmersionFrame.TalkBox.TextFrame.Text
+    else
+        if GreetingText:IsVisible() then
+            text = GreetingText:GetText()
+            frame = GreetingText
+        elseif GossipFrame.GreetingPanel:IsVisible() then
+            text = C_GossipInfo.GetText()
+            local parentFrame = GossipFrame.GreetingPanel.ScrollBox.ScrollTarget
+            for _, region in ipairs({parentFrame:GetChildren()}) do
+                if region:GetObjectType() == 'Frame' then
+                    for _, region_2 in ipairs({region:GetRegions()}) do
+                        if region_2:GetObjectType() == "FontString" and region_2:GetText() then
+                            frame = region_2
+                            break
+                        end
                     end
                 end
             end
+        elseif QuestInfoDescriptionText:IsVisible() then
+            text = QuestInfoDescriptionText:GetText()
+            frame = QuestInfoDescriptionText
         end
-    elseif QuestInfoDescriptionText:IsVisible() then
-        text = QuestInfoDescriptionText:GetText()
-        frame = QuestInfoDescriptionText
     end
     if text ~= nil and frame ~= nil then
         text = process_text(text)
-        frame:SetText(text)
+        frame:DisplayLine(text)
     end
 end
 
