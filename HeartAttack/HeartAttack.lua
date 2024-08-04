@@ -1,6 +1,7 @@
 local HA_Table = {
     panel = CreateFrame("Frame", "HeartAttackSettings")
 }
+local category
 
 --[[READ FIRST
 If you would like to change the parameters of the mod (either by lowering the total possible playtime, or increasing
@@ -138,11 +139,13 @@ local function create_interface()
             " roles, open the file HeartAttack/HeartAttack.lua in your text editor of choice and read line 3 that says"..
             " READ FIRST for instructions.")
     userNote:SetWordWrap(true)
-    InterfaceOptions_AddCategory(HA_Table.panel, true)
+    category = Settings.RegisterCanvasLayoutCategory(HA_Table.panel, HA_Table.panel.name, HA_Table.panel.name);
+    category.ID = HA_Table.panel.name
+    Settings.RegisterAddOnCategory(category);
 end
 
 function HeartAttack_OnAddonCompartmentClick()
-    InterfaceOptionsFrame_OpenToCategory(HA_Table.panel)
+    Settings.OpenToCategory(category.ID)
 end
 
 --Game Over frame

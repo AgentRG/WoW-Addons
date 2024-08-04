@@ -13,7 +13,7 @@ local IR_Table = {
     -- Spells that will get picked up by IR_Table:get_all_crowd_control_spells because they contain a keyword from
     -- CrownControlTypes that we do not want to be added to the list
     ExtraneousCCSpells = {
-        ['Evoker'] = { 'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons' },
+        ['Evoker'] = { 'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons', 'Oppressing Roar' },
         ['Warlock'] = { 'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard', 'Nightmare', 'Horrify' },
         ['Warrior'] = { 'Enraged Regeneration', 'Concussive Blows', 'Endurance Training', 'Berserker Shout',
                         'Berserker Rage', 'Cacophonous Roar', 'Menace', 'Bladestorm', 'Berserker Stance' },
@@ -100,18 +100,19 @@ local LibFramePool = LibStub("LibFramePool-1.0")
 
 -- Local version of WoW global functions for slightly faster runtime access
 local GetActionInfo = GetActionInfo
-local GetSpellCooldown = GetSpellCooldown
+local C_Spell_GetSpellCooldown = C_Spell.GetSpellCooldown
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
-local GetNumSpellTabs = GetNumSpellTabs
-local GetSpellTabInfo = GetSpellTabInfo
-local GetSpellBookItemName = GetSpellBookItemName
+local C_SpellBook_GetNumSpellBookSkillLines = C_SpellBook.GetNumSpellBookSkillLines
+local C_SpellBook_GetSpellBookSkillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo
+local C_SpellBook_GetSpellBookItemName = C_SpellBook.GetSpellBookItemName
+local C_SpellBook_GetSpellBookItemType = C_SpellBook.GetSpellBookItemType
 local tContains = tContains
 local Spell = Spell
 local GetUnitName = GetUnitName
 local UnitClassification = UnitClassification
 local HasAction = HasAction
-local GetSpellInfo = GetSpellInfo
+local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
 local GetTime = GetTime
 local C_Timer = C_Timer
 local C_EncounterJournal = C_EncounterJournal
@@ -123,7 +124,7 @@ local C_Traits = C_Traits
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
 local IsPlayerSpell = IsPlayerSpell
-local IsAddOnLoaded = IsAddOnLoaded
+local C_AddOns_IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 local CreateFrame = CreateFrame
 local StopSound = StopSound
 
@@ -133,6 +134,11 @@ local table = table
 local ipairs = ipairs
 local pairs = pairs
 local select = select
+
+-- Patch 11.0 new settings initialization
+IR_Table.panel.name = "Interrupt Reminder"
+local category = Settings.RegisterCanvasLayoutCategory(IR_Table.panel, IR_Table.panel.name, IR_Table.panel.name);
+category.ID = IR_Table.panel.name
 
 local function printInfo(text)
     print("|cff00ffffInfo (InterruptReminder): |cffffffff" .. text)
@@ -159,7 +165,7 @@ end
 SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
 --- Slash command to open the options menu.
 SlashCmdList['INTERRUPT_REMINDER_OPTIONS'] = function()
-    InterfaceOptionsFrame_OpenToCategory(IR_Table.panel)
+    Settings.OpenToCategory(category.ID)
 end
 
 --- Remove duplicates in a table and return the table
@@ -237,8 +243,8 @@ local function get_specialization_spells()
             end
         end
     end
-    for _, spellId in ipairs(spellIDs) do
-        local spell = Spell:CreateFromSpellID(spellId)
+    for _, spellID in ipairs(spellIDs) do
+        local spell = Spell:CreateFromSpellID(spellID)
         local spellName = spell:GetSpellName()
 
         if spellName and not tContains(extraneousSpells, spellName) then
@@ -264,17 +270,17 @@ end
 --- Get all spells from the player's current spell book except for the professions.
 local function get_spellbook_spells()
     local list = {}
-    local numSpellTabs = GetNumSpellTabs()
     local extraneousSpells = merge_two_tables(IR_Table.ExtraneousCCSpells[PlayerClass],
             IR_Table.ExtraneousCCSpells[PlayerRace])
 
-    for tabIndex = 1, numSpellTabs do
-        local _, _, offset, numSpells = GetSpellTabInfo(tabIndex)
-
+    for tabIndex = 1, C_SpellBook_GetNumSpellBookSkillLines() do
+        local skillLineInfo = C_SpellBook_GetSpellBookSkillLineInfo(tabIndex)
+        local offset, numSpells = skillLineInfo.itemIndexOffset, skillLineInfo.numSpellBookItems
         for spellIndex = offset + 1, offset + numSpells do
-            local spellName, _, spellId = GetSpellBookItemName(spellIndex, BOOKTYPE_SPELL)
+            local spellName = C_SpellBook_GetSpellBookItemName(spellIndex, Enum.SpellBookSpellBank.Player)
+            local spellID = select(2, C_SpellBook_GetSpellBookItemType(spellIndex, Enum.SpellBookSpellBank.Player))
             if spellName and not tContains(extraneousSpells, spellName) then
-                local spell = Spell:CreateFromSpellID(spellId)
+                local spell = Spell:CreateFromSpellID(spellID)
 
                 if spell:IsSpellEmpty() == false then
                     spell:ContinueOnSpellLoad(function()
@@ -411,7 +417,6 @@ end
 ---Options frame
 function IR_Table:CreateInterface(self)
 
-    IR_Table.panel.name = "Interrupt Reminder"
     local about_mod_hover = CreateFrame("Frame", nil, IR_Table.panel)
     local about_mod_frame = CreateFrame("Frame", nil, IR_Table.panel, 'BackdropTemplate')
     local save_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
@@ -1015,11 +1020,11 @@ function IR_Table:CreateInterface(self)
         glow_glow_checkbox:EnableMouse(false)
     end
 
-    InterfaceOptions_AddCategory(IR_Table.panel, true)
+    Settings.RegisterAddOnCategory(category);
 end
 
 function InterruptReminder_OnAddonCompartmentClick()
-    InterfaceOptionsFrame_OpenToCategory(IR_Table.panel)
+    Settings.OpenToCategory(category.ID)
 end
 
 function IR_Table:GetAllCrowdControlSpells(self)
@@ -1091,7 +1096,7 @@ function IR_Table:FindSpellLocation(spell)
     local function find_button()
         local actionBars
 
-        if IsAddOnLoaded("ElvUI") == true then
+        if C_AddOns_IsAddOnLoaded("ElvUI") == true then
             actionBars = IR_Table.ElvUIActionBars
         else
             actionBars = IR_Table.ActionBars
@@ -1105,7 +1110,8 @@ function IR_Table:FindSpellLocation(spell)
                     local actionType, id, _, actionName = GetActionInfo(slot)
 
                     if actionType == 'spell' then
-                        actionName = GetSpellInfo(id)
+                        local spellInfo = C_Spell_GetSpellInfo(id)
+                        actionName = spellInfo.name
                     end
 
                     if actionName then
@@ -1154,11 +1160,14 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     if spells_table ~= nil then
         for i = 1, #spells_table do
             local spell = spells_table[i]
-            local _, _, _, _, _, _, spellID = GetSpellInfo(spell)
+            local spellInfo = C_Spell_GetSpellInfo(spell)
+            local spellID = spellInfo.spellID
             if type(spellID) == 'number' then
                 local isInSpellbook = IsPlayerSpell(spellID)
                 if isInSpellbook then
-                    local start, duration = GetSpellCooldown(spellID)
+                    local spellCooldownInfo = C_Spell_GetSpellCooldown(spellID)
+                    local duration = spellCooldownInfo.duration
+                    local start = spellCooldownInfo.startTime
                     if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
                         table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
                     else
@@ -1176,7 +1185,7 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
             end
         end
     end
-    printDebug("GetSpellCooldowns: " .. #readyToCast .. " spells ready to cast. " .. #stillOnCooldown ..
+    printDebug("C_Spell_GetSpellCooldown: " .. #readyToCast .. " spells ready to cast. " .. #stillOnCooldown ..
             " spells are still on cooldown.")
     return readyToCast, stillOnCooldown
 end

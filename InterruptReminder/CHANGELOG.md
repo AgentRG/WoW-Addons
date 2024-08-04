@@ -1,3 +1,13 @@
+## v2.3.0
+General Changes:
+
+    Migrated old functions used to gather information about spells to be gathered from C classes.
+
+Bug Fixes:
+
+    Fixed settings menu initialization.
+    Fixed extraneous spell showing up for Evokers.
+
 ## v2.2.0
 New Addition:
     
