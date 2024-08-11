@@ -1,3 +1,8 @@
+## v2.3.1
+Bug Fixes:
+
+    Fixed null exception for spells that the player character does not have unlocked.
+
 ## v2.3.0
 General Changes:
 
