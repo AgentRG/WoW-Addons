@@ -1161,23 +1161,25 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
         for i = 1, #spells_table do
             local spell = spells_table[i]
             local spellInfo = C_Spell_GetSpellInfo(spell)
-            local spellID = spellInfo.spellID
-            if type(spellID) == 'number' then
-                local isInSpellbook = IsPlayerSpell(spellID)
-                if isInSpellbook then
-                    local spellCooldownInfo = C_Spell_GetSpellCooldown(spellID)
-                    local duration = spellCooldownInfo.duration
-                    local start = spellCooldownInfo.startTime
-                    if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
-                        table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
-                    else
-                        -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
-                        local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
-                        -- Safety check to ensure we don't save a negative number by mistake
-                        if calculatedTimeRemaining > 0 then
-                            -- Check that the spell will be ready before the spellcast from the target ends
-                            if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
-                                table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = IR_Table:FindSpellLocation(spell) })
+            if spellInfo ~= nil then
+                local spellID = spellInfo.spellID
+                if type(spellID) == 'number' then
+                    local isInSpellbook = IsPlayerSpell(spellID)
+                    if isInSpellbook then
+                        local spellCooldownInfo = C_Spell_GetSpellCooldown(spellID)
+                        local duration = spellCooldownInfo.duration
+                        local start = spellCooldownInfo.startTime
+                        if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
+                            table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
+                        else
+                            -- Add a 0.01 overhead to ensure the spell gets highlighted after it is off cooldown
+                            local calculatedTimeRemaining = (start + duration - GetTime()) + 0.01
+                            -- Safety check to ensure we don't save a negative number by mistake
+                            if calculatedTimeRemaining > 0 then
+                                -- Check that the spell will be ready before the spellcast from the target ends
+                                if IR_Table.EndTime ~= nil and IR_Table.EndTime < ((start + duration) * 1000) then
+                                    table.insert(stillOnCooldown, { ['cooldown'] = calculatedTimeRemaining, ['location'] = IR_Table:FindSpellLocation(spell) })
+                                end
                             end
                         end
                     end
