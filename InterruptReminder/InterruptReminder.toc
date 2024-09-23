@@ -1,5 +1,5 @@
-## Interface: 110000
-## Version: 2.3.1
+## Interface: 110002
+## Version: 2.4.0
 ## Title: Interrupt Reminder
 ## Author: AgentRG
 ## OptionalDeps: LibCustomGlow-1.0

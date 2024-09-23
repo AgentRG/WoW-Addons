@@ -1,5 +1,6 @@
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
+    Mod_Version = 'Interrupt Reminder Version: 2.4.0',
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
                    'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
@@ -7,80 +8,79 @@ local IR_Table = {
                         'ElvUI_Bar5Button', 'ElvUI_Bar6Button', 'ElvUI_Bar7Button', 'ElvUI_Bar8Button',
                         'ElvUI_Bar9Button', 'ElvUI_Bar10Button', 'ElvUI_Bar13Button', 'ElvUI_Bar14Button',
                         'ElvUI_Bar15Button' },
-    -- All keywords that are found in varying Crowd Control spells
-    CrownControlTypes = { 'knock', 'control', 'confuse', 'fear', 'flee', 'stun', 'interrupt', 'incapacit',
-                          'intimidat', 'sleep', 'disorient', 'horr', 'silenc', 'counter' },
-    -- Spells that will get picked up by IR_Table:get_all_crowd_control_spells because they contain a keyword from
-    -- CrownControlTypes that we do not want to be added to the list
-    ExtraneousCCSpells = {
-        ['Evoker'] = { 'Deep Breath', 'Dream Flight', 'Emerald Communion', 'Breath of Eons', 'Oppressing Roar' },
-        ['Warlock'] = { 'Dark Pact', 'Unending Resolve', 'Grimoire: Felguard', 'Nightmare', 'Horrify' },
-        ['Warrior'] = { 'Enraged Regeneration', 'Concussive Blows', 'Endurance Training', 'Berserker Shout',
-                        'Berserker Rage', 'Cacophonous Roar', 'Menace', 'Bladestorm', 'Berserker Stance' },
-        ['Mage'] = { 'Blink', 'Frost Nova', 'Volatile Detonation', 'Quick Witted', 'Time Manipulation', 'Glacial Spike' },
-        ['Demon Hunter'] = { 'Isolated Prey', 'Chaos Fragments', 'Disrupting Fury' },
-        ['Druid'] = { 'Barkskin', 'Light of the Sun', 'Pouncing Strikes', 'Inner Peace' },
-        ['Hunter'] = { 'Eyes of the Beast', 'Binding Shackles', 'Bestial Wrath' },
-        ['Death Knight'] = { "Death's Advance", 'Lichborne', 'Coldthirst', 'Icebound Fortitude' },
-        ['Priest'] = { 'Pain Suppression', 'Guardian Spirit', 'Dispersion', 'Ultimate Penitence', 'Petrifying Scream',
-                       'Censure', 'Last Word', "Idol of Y'Shaarj" },
-        ['Paladin'] = { 'Divine Shield', 'Divine Protection', "Justicar's Vengeance", 'Concentration Aura',
-                        'Auras of the Resolute', 'Punishment' },
-        ['Rogue'] = { 'Sap', 'Iron Wire' },
-        ['Monk'] = { 'Restoral', 'Storm, Earth, and Fire', "Shaohao's Lessons" },
-        ['Shaman'] = { 'Tumultuous Fissures', 'Primal Elementalist', 'Mountains Will Fall', "Spiritwalker's Aegis",
-                       'Tremor Totem', 'Static Charge', 'Tranquil Air Totem', 'Thundershock' },
-        ['Human'] = { 'Will to Survive' },
-        ['Dwarf'] = {},
-        ['Night Elf'] = {},
-        ['Gnome'] = {},
-        ['Draenei'] = {},
-        ['Pandaren'] = {},
-        ['Dracthyr'] = {},
-        ['Void Elf'] = {},
-        ['Lightforged Draenei'] = {},
-        ['Dark Iron Dwarf'] = {},
-        ['Kul Tiran'] = {},
-        ['Mechagnome'] = {},
-        ['Tauren'] = {},
-        ['Troll'] = {},
-        ['Blood Elf'] = {},
-        ['Goblin'] = {},
-        ['Nightborne'] = {},
-        ['Highmountain Tauren'] = {},
-        ["Mag'har Orc"] = {},
-        ['Vulpera'] = {},
-        ['Worgen'] = { 'Calm the Wolf' },
-        ['Orc'] = { 'Hardiness' },
-        ['Undead'] = { 'Will of the Forsaken' },
-        ['Zandalari Troll'] = { "Regeneratin'" }
-    },
     -- Default interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary
     --effect)
     InterruptSpells = {
-        ['Death Knight'] = { 'Mind Freeze', 'Asphyxiate', 'Strangulate' },
-        ['Demon Hunter'] = { 'Disrupt' },
-        ['Druid'] = { 'Skull Bash', 'Solar Beam' },
-        ['Evoker'] = { 'Quell' },
-        ['Hunter'] = { 'Counter Shot', 'Muzzle' },
-        ['Mage'] = { 'Counterspell' },
-        ['Monk'] = { 'Spear Hand Strike' },
-        ['Paladin'] = { 'Rebuke', "Avenger's Shield" },
-        ['Priest'] = { 'Silence' },
-        ['Rogue'] = { 'Kick' },
-        ['Shaman'] = { 'Wind Shear' },
-        ['Warlock'] = { 'Spell Lock', 'Optical Blast', 'Axe Toss' },
-        ['Warrior'] = { 'Pummel' }
+        ['Death Knight'] = { 47528 },
+        ['Demon Hunter'] = { 183752 },
+        ['Druid'] = { 78675 },
+        ['Evoker'] = { 351338 },
+        ['Hunter'] = { 147362, 187707 },
+        ['Mage'] = { 2139 },
+        ['Monk'] = { 116705 },
+        ['Paladin'] = { 96231 },
+        ['Priest'] = { 15487 },
+        ['Rogue'] = { 1766 },
+        ['Shaman'] = { 57994 },
+        ['Warlock'] = { 19647, 115781, 89766 },
+        ['Warrior'] = { 6552 }
+    },
+    CCSpells = {
+        ['Death Knight'] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]],
+                             444010 --[[Death Charge]], 207167 --[[Blinding Sleet]], 374049 --[[Suppression]],
+                             206970 --[[Tightening Grasp]] },
+        ['Demon Hunter'] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]],
+                             211881 --[[Fel Eruption]], 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]],
+                             179057 --[[Chaos Nova]], 452403 --[[Wave of Debilitation]]},
+        ['Druid'] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
+                      33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
+                      102359 --[[Mass Entanglement]] },
+        ['Evoker'] = { 351338 --[[Quell]], 360806 --[[Sleep Walk]] },
+        ['Hunter'] = { 147362 --[[Counter Shot]], 187707 --[[Muzzle]], 187650 --[[Freezing Trap]],
+                       1513 --[[Scare Beast]], 109248 --[[Binding Shot]], 19577 --[[Intimidation]],
+                       186387 --[[Bursting Shot]], 213691 --[[Scatter Shot]], 236776 --[[High Explosive Trap]],
+                       462031 --[[Implosive Trap]], 355589 --[[Wailing Arrow]]},
+        ['Mage'] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
+                     157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
+                     157980 --[[Supernova]]},
+        ['Monk'] = { 117952 --[[Crackling Jade Lightning]], 119381 --[[Leg Sweep]], 115078 --[[Paralysis]],
+                     198898 --[[Song of Chi-Ji]], 116705 --[[Spear Hand Strike]]},
+        ['Paladin'] = { 853 --[[Hammer of Justice]], 31935 --[[Avenger's Shield]], 255937 --[[Wake of Ashes]],
+                        20066 --[[Repentance]], 115750 --[[Blinding Light]], 96231 --[[Rebuke]], 10326 --[[Turn Evil]]},
+        ['Priest'] = { 64044 --[[Psychic Horror]], 8122 --[[Psychic Scream]], 88625 --[[Holy Word: Chastise]],
+                       34914 --[[Vampiric Touch]], 15487 --[[Silence]], 605 --[[Mind Control]],
+                       205364 --[[Dominate Mind]]},
+        ['Rogue'] = { 1833 --[[Cheap Shot]], 1766 --[[Kick]], 408 --[[Kidney Shot]], 2094 --[[Blind]],
+                      1776 --[[Gouge]]},
+        ['Shaman'] = { 188389 --[[Flame Shock]], 197214 --[[Sundering]], 462620 --[[Earthquake (At target)]],
+                       61882 --[[Earthquake (Selected location]], 192058 --[[Capacitor Totem]],
+                       305483 --[[Lightning Lasso]], 51490 --[[Thunderstorm]], 57994 --[[Wind Shear]], 51514 --[[Hex]]},
+        ['Warlock'] = { 5782 --[[Fear]], 316099 --[[Unstable Affliction]], 1122 --[[Summon Infernal]],
+                        30283 --[[Shadowfury]], 5484 --[[Howl of Terror]], 6789 --[[Mortal Coil]],
+                        19647 --[[Spell Lock]], 115781 --[[Optical Blast]], 89766 --[[Axe Toss]]},
+        ['Warrior'] = { 6552 --[[Pummel]], 386071 --[[Disrupting Shout]], 385952 --[[Shield Charge]],
+                        107570 --[[Storm Bolt]], 46968 --[[Shockwave]], 5246 --[[Intimidating Shout]] }
+    },
+    RaceSpells = {
+        ['Dracthyr'] = { 368970 --[[Tail Swipe]], 357214 --[[Wing Buffet]] },
+        ['Kul Tiran'] = { 287712 --[[Haymaker]] },
+        ['Tauren'] = { 20549 --[[War Stomp]] },
+        ['Highmountain Tauren'] = { 255654 --[[Bull Rush]] },
+        ['Pandaren'] = { 107079 --[[Quaking Palm]] },
+        ['Earthen'] = {}, ['Dwarf'] = {}, ['Void Elf'] = {}, ['Vulpera'] = {}, ['Night Elf'] = {},
+        ['Dark Iron Dwarf'] = {}, ['Blood Elf'] = {}, ['Human'] = {}, ['Zandalari Troll'] = {}, ['Orc'] = {},
+        ['Nightborne'] = {}, ['Worgen'] = {}, ['Draenei'] = {}, ["Mag'har Orc"] = {}, ['Goblin'] = {},
+        ['Mechagnome'] = {}, ['Lightforged Draenei'] = {}, ['Undead'] = {}, ['Troll'] = {}, ['Gnome'] = {}
     },
     SaveHidden = true,
-    bossInserts = 0,
+    BossInserts = 0,
     EndTime = nil,
     StartTime = nil,
     IsInterruptible = false,
     TargetCanBeStunned = false,
     CurrentTargetCanBeAttacked = false,
     SpecializationChanged = false,
-    panel = CreateFrame("Frame", "InterruptReminderSettings"),
+    Panel = CreateFrame("Frame", "InterruptReminderSettings"),
     ButtonCache = {},
     GlowCache = nil,
     HideCache = nil,
@@ -93,7 +93,6 @@ local PlayerClass = UnitClass('player')
 local PlayerRace = UnitRace('player')
 local CheckButtonFramePool
 
-
 -- Library used to highlight spells. Without the library, the addon will encounter protected action access error
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 local LibFramePool = LibStub("LibFramePool-1.0")
@@ -103,10 +102,6 @@ local GetActionInfo = GetActionInfo
 local C_Spell_GetSpellCooldown = C_Spell.GetSpellCooldown
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
-local C_SpellBook_GetNumSpellBookSkillLines = C_SpellBook.GetNumSpellBookSkillLines
-local C_SpellBook_GetSpellBookSkillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo
-local C_SpellBook_GetSpellBookItemName = C_SpellBook.GetSpellBookItemName
-local C_SpellBook_GetSpellBookItemType = C_SpellBook.GetSpellBookItemType
 local tContains = tContains
 local Spell = Spell
 local GetUnitName = GetUnitName
@@ -119,8 +114,6 @@ local C_EncounterJournal = C_EncounterJournal
 local EJ_GetCreatureInfo = EJ_GetCreatureInfo
 local UnitCanAttack = UnitCanAttack
 local C_Map = C_Map
-local C_ClassTalents = C_ClassTalents
-local C_Traits = C_Traits
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
 local IsPlayerSpell = IsPlayerSpell
@@ -136,9 +129,9 @@ local pairs = pairs
 local select = select
 
 -- Patch 11.0 new settings initialization
-IR_Table.panel.name = "Interrupt Reminder"
-local category = Settings.RegisterCanvasLayoutCategory(IR_Table.panel, IR_Table.panel.name, IR_Table.panel.name);
-category.ID = IR_Table.panel.name
+IR_Table.Panel.name = "Interrupt Reminder"
+local category = Settings.RegisterCanvasLayoutCategory(IR_Table.Panel, IR_Table.Panel.name, IR_Table.Panel.name);
+category.ID = IR_Table.Panel.name
 
 local function printInfo(text)
     print("|cff00ffffInfo (InterruptReminder): |cffffffff" .. text)
@@ -207,96 +200,18 @@ local function merge_two_tables(table_one, table_two)
     return table_one
 end
 
---- Get all spells from the specialization tree that is currently active for the player and save them into a table.
-local function get_specialization_spells()
-    local spellIDs = {}
-    local list = {}
-    local extraneousSpells = merge_two_tables(IR_Table.ExtraneousCCSpells[PlayerClass],
-            IR_Table.ExtraneousCCSpells[PlayerRace])
-
-    local configID = C_ClassTalents.GetActiveConfigID()
-    if configID == nil then
-        return
-    end
-
-    local configInfo = C_Traits.GetConfigInfo(configID)
-    if configInfo == nil then
-        return
-    end
-
-    for _, treeID in ipairs(configInfo.treeIDs) do
-        local nodes = C_Traits.GetTreeNodes(treeID)
-
-        for _, nodeID in ipairs(nodes) do
-            local nodeInfo = C_Traits.GetNodeInfo(configID, nodeID)
-
-            for _, entryID in ipairs(nodeInfo.entryIDs) do
-                local entryInfo = C_Traits.GetEntryInfo(configID, entryID)
-
-                if entryInfo and entryInfo.definitionID then
-                    local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
-
-                    if definitionInfo.spellID then
-                        table.insert(spellIDs, definitionInfo.spellID)
-                    end
-                end
-            end
-        end
-    end
-    for _, spellID in ipairs(spellIDs) do
-        local spell = Spell:CreateFromSpellID(spellID)
-        local spellName = spell:GetSpellName()
-
-        if spellName and not tContains(extraneousSpells, spellName) then
-            if spell:IsSpellEmpty() == false then
-                spell:ContinueOnSpellLoad(function()
-                    local desc = spell:GetSpellDescription()
-                    local descLower = string.lower(desc)
-
-                    for _, cc in pairs(IR_Table.CrownControlTypes) do
-                        if string.find(descLower, cc, 1, true) then
-                            printDebug("get_specialization_spells: Inserted spell " .. spellName .. ".")
-                            table.insert(list, { spellName = spellName, description = desc })
-                            break
-                        end
-                    end
-                end)
-            end
-        end
-    end
-    return list
-end
-
---- Get all spells from the player's current spell book except for the professions.
+--- Create spell objects for all spell IDs that match the character's class and race and get name/description
 local function get_spellbook_spells()
+    local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
     local list = {}
-    local extraneousSpells = merge_two_tables(IR_Table.ExtraneousCCSpells[PlayerClass],
-            IR_Table.ExtraneousCCSpells[PlayerRace])
-
-    for tabIndex = 1, C_SpellBook_GetNumSpellBookSkillLines() do
-        local skillLineInfo = C_SpellBook_GetSpellBookSkillLineInfo(tabIndex)
-        local offset, numSpells = skillLineInfo.itemIndexOffset, skillLineInfo.numSpellBookItems
-        for spellIndex = offset + 1, offset + numSpells do
-            local spellName = C_SpellBook_GetSpellBookItemName(spellIndex, Enum.SpellBookSpellBank.Player)
-            local spellID = select(2, C_SpellBook_GetSpellBookItemType(spellIndex, Enum.SpellBookSpellBank.Player))
-            if spellName and not tContains(extraneousSpells, spellName) then
-                local spell = Spell:CreateFromSpellID(spellID)
-
-                if spell:IsSpellEmpty() == false then
-                    spell:ContinueOnSpellLoad(function()
-                        local desc = spell:GetSpellDescription()
-                        local descLower = string.lower(desc)
-
-                        for _, cc in pairs(IR_Table.CrownControlTypes) do
-                            if string.find(descLower, cc, 1, true) then
-                                printDebug("get_spellbook_spells: Inserted spell " .. spellName .. ".")
-                                table.insert(list, { spellName = spellName, description = desc })
-                                break
-                            end
-                        end
-                    end)
-                end
-            end
+    for _ = 1, #spells do
+        local spell = Spell:CreateFromSpellID(spells[_])
+        if spell:IsSpellEmpty() == false then
+            spell:ContinueOnSpellLoad(function()
+                local desc = spell:GetSpellDescription()
+                local name = spell:GetSpellName()
+                table.insert(list, { spellName = name, description = desc })
+            end)
         end
     end
     return list
@@ -386,13 +301,13 @@ local function get_bosses()
 
     if bestMapForPlayer ~= nil then
         local encounters = C_EncounterJournal.GetEncountersOnMap(bestMapForPlayer) or {}
-        IR_Table.bossInserts = 0
+        IR_Table.BossInserts = 0
         for _, encounter in pairs(encounters) do
             for i = 1, 9 do
                 local name = select(2, EJ_GetCreatureInfo(i, encounter.encounterID))
                 if name then
                     InterruptReminder_Table.CurrentBossList[#InterruptReminder_Table.CurrentBossList + 1] = name
-                    IR_Table.bossInserts = IR_Table.bossInserts + 1
+                    IR_Table.BossInserts = IR_Table.BossInserts + 1
                 else
                     break
                 end
@@ -404,7 +319,7 @@ end
 
 ---Keep the boss list at the capacity of 30
 local function truncate_boss_list()
-    local inserts = IR_Table.bossInserts
+    local inserts = IR_Table.BossInserts
 
     if #InterruptReminder_Table.CurrentBossList >= 30 then
         for _ = 1, inserts do
@@ -417,35 +332,39 @@ end
 ---Options frame
 function IR_Table:CreateInterface(self)
 
-    local about_mod_hover = CreateFrame("Frame", nil, IR_Table.panel)
-    local about_mod_frame = CreateFrame("Frame", nil, IR_Table.panel, 'BackdropTemplate')
-    local save_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local cancel_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local refresh_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local advanced_spell_mode = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local debug_mode = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local play_sound = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local glow_texture_test = CreateFrame("Frame", nil, IR_Table.panel)
-    local proc_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local glow_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local pixel_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local cast_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local save_warning_text = IR_Table.panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    local r_slider = CreateFrame("Slider", "RSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local g_slider = CreateFrame("Slider", "GSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local b_slider = CreateFrame("Slider", "BSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local a_slider = CreateFrame("Slider", "ASlider", IR_Table.panel, "OptionsSliderTemplate")
-    local n_slider = CreateFrame("Slider", "NSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local t_slider = CreateFrame("Slider", "TSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local f_slider = CreateFrame("Slider", "FSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local s_slider = CreateFrame("Slider", "SSlider", IR_Table.panel, "OptionsSliderTemplate")
+    local about_mod_hover = CreateFrame("Frame", nil, IR_Table.Panel)
+    local about_mod_frame = CreateFrame("Frame", nil, IR_Table.Panel, 'BackdropTemplate')
+    local save_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local cancel_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local refresh_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local debug_mode = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local play_sound = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local glow_texture_test = CreateFrame("Frame", nil, IR_Table.Panel)
+    local proc_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local glow_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local pixel_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local cast_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local save_warning_text = IR_Table.Panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    local version_text = IR_Table.Panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    local r_slider = CreateFrame("Slider", "RSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local g_slider = CreateFrame("Slider", "GSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local b_slider = CreateFrame("Slider", "BSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local a_slider = CreateFrame("Slider", "ASlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local n_slider = CreateFrame("Slider", "NSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local t_slider = CreateFrame("Slider", "TSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local f_slider = CreateFrame("Slider", "FSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local s_slider = CreateFrame("Slider", "SSlider", IR_Table.Panel, "OptionsSliderTemplate")
     local about_mod_text = about_mod_frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    local horizontal_line_top = IR_Table.panel:CreateLine()
-    local horizontal_line_bottom = IR_Table.panel:CreateLine()
+    local horizontal_line_top = IR_Table.Panel:CreateLine()
+    local horizontal_line_bottom = IR_Table.Panel:CreateLine()
+
+    version_text:SetText(IR_Table.Mod_Version)
+    version_text:SetPoint("BOTTOMLEFT", 8, 0)
+    version_text:Show()
 
     --- Create 30 checkboxes to be used
     local function create_checkboxes(frame)
-        CheckButtonFramePool = LibFramePool:CreateFramePool(30, "CheckButton", {nil, frame, "ChatConfigCheckButtonTemplate"})
+        CheckButtonFramePool = LibFramePool:CreateFramePool(30, "CheckButton", { nil, frame, "ChatConfigCheckButtonTemplate" })
         LibFramePool:SetOnClickScript(CheckButtonFramePool, function()
             if IR_Table.SaveHidden == true then
                 save_warning_text:Show()
@@ -696,26 +615,24 @@ function IR_Table:CreateInterface(self)
         end
     end
 
-    --- If advanced options are enabled, set the name/description of checkbox at position i to that of that spell. If
-    --- the spell is present in SelectedSpells, set the checkbox to checked status. Hide all other checkboxes.
+    --- Set the name/description of checkbox at position i to that of that spell. If the spell is present in
+    --- SelectedSpells, set the checkbox to checked status. Hide all other checkboxes.
     local function pre_fill_checkboxes()
-        if self.IsInit == true then
-            local spells = self.Spells
-            local checkedSpells = self.SelectedSpells
+        local spells = self.Spells
+        local checkedSpells = self.SelectedSpells
 
-            for i = 1, #spells do
-                local spell_name = spells[i].spellName
-                local spell_description = spells[i].description
-                local checkbox = CheckButtonFramePool[i].frame
-                checkbox.Text:SetText(spell_name)
-                checkbox.tooltip = spell_description
-                if tContains(checkedSpells, spell_name) then
-                    checkbox:SetChecked(true)
-                else
-                    checkbox:SetChecked(false)
-                end
-                checkbox:Show()
+        for i = 1, #spells do
+            local spell_name = spells[i].spellName
+            local spell_description = spells[i].description
+            local checkbox = CheckButtonFramePool[i].frame
+            checkbox.Text:SetText(spell_name)
+            checkbox.tooltip = spell_description
+            if tContains(checkedSpells, spell_name) then
+                checkbox:SetChecked(true)
+            else
+                checkbox:SetChecked(false)
             end
+            checkbox:Show()
         end
     end
 
@@ -747,39 +664,14 @@ function IR_Table:CreateInterface(self)
         end
     end
 
-    --- Set SelectedSpells to default interrupt spells. Hide all checkboxes and set them to unchecked.
-    local function remove_spell_checkboxes()
-        self.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
-        IR_Table.SelectedSpells = self.selectedSpells
-        for i = 1, 30 do
-            local checkbox = CheckButtonFramePool[i].frame
-
-            checkbox:Hide()
-            checkbox:SetChecked(false)
-        end
-        IR_Table.TargetCanBeStunned = false
-    end
-
     --- Create all header checkboxes and fill in the relevant data for the them where appropriate, as well as the
     --- OnClick script
     local function generate_header_checkboxes()
-        local checkboxes = { advanced_spell_mode, debug_mode , play_sound}
-        local text = { 'Enable Advanced Spell Selection', 'Enable Debugger', 'Enable Audio Cue' }
-        local tooltip = { 'Brings up a list of checkboxes for the user to select from for individual spells that the' ..
-                                  ' user would like to see highlighted.', 'Enable the debugger for event handling and' ..
-                                  ' other functions.', 'Play a sound when the target is casting an interruptible spell.' }
+        local checkboxes = { debug_mode, play_sound }
+        local text = { 'Enable Debugger', 'Enable Audio Cue' }
+        local tooltip = { 'Enable the debugger for event handling and other functions.', 'Play a sound when the target is casting an interruptible spell.' }
         local x = 8
         local scripts = { function(checkbox)
-            if checkbox:GetChecked() == true then
-                self.IsInit = true
-                generate_spell_checkboxes(IR_Table.panel)
-                hide_and_show_frames(nil, { save_button, cancel_button, refresh_button })
-            else
-                self.IsInit = false
-                remove_spell_checkboxes()
-                hide_and_show_frames({ save_button, cancel_button, refresh_button, save_warning_text }, nil)
-            end
-        end, function(checkbox)
             if checkbox:GetChecked() == true then
                 self.Debug = true
                 printInfo("Debugger has been enabled.")
@@ -800,24 +692,15 @@ function IR_Table:CreateInterface(self)
             checkboxes[i].tooltip = tooltip[i]
             checkboxes[i]:SetPoint("TOPLEFT", x, -10)
             if i == 1 then
-                if self.IsInit == true then
-                    checkboxes[i]:SetChecked(true)
-                    generate_spell_glow_checkboxes(IR_Table.panel)
-                else
-                    checkboxes[i]:SetChecked(false)
-                end
-            elseif i == 2 then
                 if self.Debug == true then
                     checkboxes[i]:SetChecked(true)
                 else
                     checkboxes[i]:SetChecked(false)
                 end
+            elseif i == 2 then
+                checkboxes[i]:SetChecked(true)
             else
-                if self.PlaySound == true then
-                    checkboxes[i]:SetChecked(true)
-                else
-                    checkboxes[i]:SetChecked(false)
-                end
+                checkboxes[i]:SetChecked(false)
             end
             checkboxes[i]:SetScript("OnClick", scripts[i])
             x = x + 240
@@ -843,12 +726,11 @@ function IR_Table:CreateInterface(self)
         IR_Table.SelectedSpells = copy
     end
 
-    --- Create all spell-related buttons and fill in the relevant data for the them where appropriate, as well as the
-    --- OnClick script
+    --- Create all spell-related buttons and fill in the relevant data for the them where appropriate, as well as the OnClick script
     local function generate_buttons()
-        local buttons = { save_button, refresh_button, cancel_button }
-        local text = { 'Save Spells', 'Refresh Spells', 'Cancel' }
-        local x = -100
+        local buttons = { save_button, cancel_button }
+        local text = { 'Save Spells', 'Cancel' }
+        local x = -50
         local scripts = { function()
             enable_and_disable_mouse_frames(buttons, nil)
             PlaySoundFile(567407, "SFX")
@@ -857,20 +739,6 @@ function IR_Table:CreateInterface(self)
                 save_warning_text:Hide()
                 IR_Table.SaveHidden = true
             end
-            enable_and_disable_mouse_frames(nil, buttons)
-        end, function()
-            enable_and_disable_mouse_frames(buttons, nil)
-            PlaySoundFile(567407, "SFX")
-            self.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
-            IR_Table.SelectedSpells = self.selectedSpells
-            pre_fill_checkboxes()
-            IR_Table:GetAllCrowdControlSpells(self)
-            generate_spell_checkboxes(IR_Table.panel)
-            if IR_Table.SaveHidden == false then
-                save_warning_text:Hide()
-                IR_Table.SaveHidden = true
-            end
-            IR_Table:Hide_Glow(refresh_button)
             enable_and_disable_mouse_frames(nil, buttons)
         end, function()
             enable_and_disable_mouse_frames(buttons, nil)
@@ -884,25 +752,11 @@ function IR_Table:CreateInterface(self)
         end }
 
         for i = 1, #buttons do
-            if self.IsInit == false then
-                buttons[i]:Hide()
-            else
-                buttons[i]:Show()
-            end
+            buttons[i]:Show()
             buttons[i]:SetText(text[i])
             buttons[i]:SetWidth(100)
             buttons[i]:SetPoint("BOTTOM", x, 300)
             buttons[i]:SetScript("OnClick", scripts[i])
-            if i == 2 then
-                buttons[i]:SetScript("OnEvent", function(_, event)
-                    if event == 'ACTIVE_PLAYER_SPECIALIZATION_CHANGED' then
-                        printInfo('Specialization changed! Please go to the mod settings to update your spell' ..
-                                ' highlighting.')
-                        IR_Table:Show_Glow(refresh_button)
-                    end
-                end)
-                buttons[i]:RegisterEvent('ACTIVE_PLAYER_SPECIALIZATION_CHANGED')
-            end
             x = x + 100
         end
     end
@@ -958,27 +812,17 @@ function IR_Table:CreateInterface(self)
     about_mod_text:SetJustifyH("LEFT")
     about_mod_text:SetJustifyV("TOP");
     about_mod_text:SetText("About the mod:\n\n" ..
-            "• If \"Enable Advanced Spell Selection\" is disabled, the default interrupt spells will be highlighted." ..
-            " In the case of your player class, it will be the spell(s): "
-            .. table.concat(IR_Table.InterruptSpells[PlayerClass], ',') .. ".\n\n" ..
-            "• If \"Enable Advanced Spell Selection\" is enabled, a list of checkboxes will appear for selection. A " ..
-            "special algorithm runs in the background to determine which spells are eligible to be considered Crowd " ..
-            "Control spells. If you noticed that a spell that should not be in the list is there, or one that should " ..
-            "be there is missing, please let the developer know as he plays only one class.\n\n" ..
-            "• If you notice that the list of available spells seems too short, or that only the spells that you previously" ..
-            " selected appear on the list of checkboxes, please click on the \"Refresh Spells\" button. World of" ..
-            " Warcraft does not always load all objects by the time this options menu is generated, so at the time the" ..
-            " algorithm ran, it's possible that some parts of the game were not available for the addon.\n\n" ..
-            "• If you have changed your specialization, you will get a notification in chat to remind you to refresh " ..
-            "your spells, as each specialization has their own unique Crowd Control spells.\n\n" ..
+            "• If the current mob is a boss, class interrupt spells will be highlighted instead of user selections.\n\n" ..
             "• The debugger is mainly for developer use. Enabling it will cause a lot of chat noise.\n\n" ..
             "• Please let the developer of any bugs you come across at either the GitHub repository, CurseForge or" ..
-            " WoWInterface.")
+            " WoWInterface.\n\n" ..
+            "• Please let the developer know if any spells are missing from the list of spells available for selection.")
     about_mod_text:SetWordWrap(true)
 
     --- Pre-run certain scripts
     IR_Table:GetAllCrowdControlSpells(self)
-    create_checkboxes(IR_Table.panel)
+    create_checkboxes(IR_Table.Panel)
+    generate_spell_checkboxes()
     pre_fill_checkboxes()
 
     --- Horizontal line at the top
@@ -1029,15 +873,7 @@ end
 
 function IR_Table:GetAllCrowdControlSpells(self)
     self.Spells = {}
-    local copy = {}
-
-    copy = get_spellbook_spells()
-    local specialization_spells = get_specialization_spells()
-    if specialization_spells ~= nil then
-        copy = merge_two_tables(copy, specialization_spells)
-    end
-    copy = remove_duplicates_from_nested_table(copy, 'spellName')
-    self.Spells = copy
+    self.Spells = get_spellbook_spells()
 end
 
 ---Algorithm that determines whether the currently selected target is a boss and reassigns IR_Table.TargetCanBeStunned
@@ -1053,37 +889,35 @@ function IR_Table:IsTargetABoss(self)
          pull the target information from the previous target, even though GetUnitName should return nil at that point.
          Luckily, thin air cannot cast spells, so the rest of the addon will still function as intended. ]]
 
-    if self.IsInit then
-        local targetName = GetUnitName('target', false)
+    local targetName = GetUnitName('target', false)
 
-        -- Check to see if the user is currently in an instance
-        if is_in_instance() == true then
+    -- Check to see if the user is currently in an instance
+    if is_in_instance() == true then
 
-            -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
-            if bosses == nil then
-                IR_Table:Handle_ZoneChanged(self)
-                bosses = self.CurrentBossList
-            end
+        -- Safety measure in case the dungeon boss names has not been defined as either list of bosses or empty
+        if bosses == nil then
+            IR_Table:Handle_ZoneChanged(self)
+            bosses = self.CurrentBossList
+        end
 
-            -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
-            if tContains(bosses, targetName) then
-                IR_Table.TargetCanBeStunned = false
-                printDebug("IsTargetABoss: Target is in boss list.")
-            else
-                IR_Table.TargetCanBeStunned = true
-                printDebug("IsTargetABoss: Target is not in boss list.")
-            end
+        -- Otherwise, check whether the target is a boss. If he's a boss, he's not stunnable.
+        if tContains(bosses, targetName) then
+            IR_Table.TargetCanBeStunned = false
+            printDebug("IsTargetABoss: Target is in boss list.")
         else
-            -- Otherwise, assume we're in the open world
-            local enemyRarity = UnitClassification('target')
-            -- In WoW, units that are world bosses, elites and rare elites are more likely than not stun immune.
-            if enemyRarity == 'worldboss' or enemyRarity == 'elite' or enemyRarity == 'rareelite' then
-                IR_Table.TargetCanBeStunned = false
-                printDebug("IsTargetABoss: Target has a frame, therefore cannot be stunned.")
-            else
-                printDebug("IsTargetABoss: Target has no frame, therefore can be stunned.")
-                IR_Table.TargetCanBeStunned = true
-            end
+            IR_Table.TargetCanBeStunned = true
+            printDebug("IsTargetABoss: Target is not in boss list.")
+        end
+    else
+        -- Otherwise, assume we're in the open world
+        local enemyRarity = UnitClassification('target')
+        -- In WoW, units that are world bosses, elites and rare elites are more likely than not stun immune.
+        if enemyRarity == 'worldboss' or enemyRarity == 'elite' or enemyRarity == 'rareelite' then
+            IR_Table.TargetCanBeStunned = false
+            printDebug("IsTargetABoss: Target has a frame, therefore cannot be stunned.")
+        else
+            printDebug("IsTargetABoss: Target has no frame, therefore can be stunned.")
+            IR_Table.TargetCanBeStunned = true
         end
     end
 end
@@ -1399,9 +1233,6 @@ function IR_Table:Handle_PlayerLogin()
     if InterruptReminder_Table == nil then
         InterruptReminder_Table = {}
     end
-    if InterruptReminder_Table.IsInit == nil then
-        InterruptReminder_Table.IsInit = false
-    end
     if InterruptReminder_Table.Spells == nil then
         InterruptReminder_Table.Spells = {}
     end
@@ -1453,8 +1284,7 @@ function f:OnEvent(event, ...)
     if event == 'PLAYER_TARGET_CHANGED' then
         IR_Table:Handle_PlayerSwitchingTargets(IR_Table)
     end
-    if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED')
-            and InterruptReminder_Table.IsInit == true then
+    if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') then
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
     end
 end

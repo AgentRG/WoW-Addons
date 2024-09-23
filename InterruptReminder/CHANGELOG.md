@@ -1,3 +1,22 @@
+## v2.4.0
+New Addition:
+
+    Migrated from smart spell lookup based on keywords to hardcoded spell IDs based on character class/race.
+    The reasoning being that support for multiple languages would be impossibly difficult to support.
+
+    Plus due to frequent updates, I often had to exclude specific spells that got picked up by the mod because they
+    matched the lookup, but did not meet the correct criteria.
+
+    Cataclysm version of the mod is still using the old lookup logic. I do not plan to update that version of the mod
+    as I do not play classic enough (or at all) to see myself spending time supporting it, but I am looking for volunteers!
+
+General Changes:
+    
+    Removed all code related to smart lookup of spells.
+    Added add-on version number to bottom left of config window.
+    Rewrote some parts in the about-mod section.
+    
+
 ## v2.3.1
 Bug Fixes:
 
