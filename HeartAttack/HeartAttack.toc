@@ -1,4 +1,4 @@
-## Interface: 110000
+## Interface: 110002
 ## Version: 1.1.0
 ## Title: Heart Attack
 ## Author: AgentRG
