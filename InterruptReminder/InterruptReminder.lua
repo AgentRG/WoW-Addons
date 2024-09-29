@@ -1,6 +1,6 @@
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
-    Mod_Version = 'Interrupt Reminder Version: 2.4.0',
+    Mod_Version = 'Interrupt Reminder Version: 2.4.1',
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
                    'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
@@ -72,6 +72,7 @@ local IR_Table = {
         ['Nightborne'] = {}, ['Worgen'] = {}, ['Draenei'] = {}, ["Mag'har Orc"] = {}, ['Goblin'] = {},
         ['Mechagnome'] = {}, ['Lightforged Draenei'] = {}, ['Undead'] = {}, ['Troll'] = {}, ['Gnome'] = {}
     },
+    SpellCache = {},
     SaveHidden = true,
     BossInserts = 0,
     EndTime = nil,
@@ -103,11 +104,13 @@ local C_Spell_GetSpellCooldown = C_Spell.GetSpellCooldown
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
 local tContains = tContains
-local Spell = Spell
 local GetUnitName = GetUnitName
 local UnitClassification = UnitClassification
 local HasAction = HasAction
 local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
+local C_Spell_GetSpellName = C_Spell.GetSpellName
+local C_Spell_GetSpellDescription = C_Spell.GetSpellDescription
+local C_Spell_RequestLoadSpellData = C_Spell.RequestLoadSpellData
 local GetTime = GetTime
 local C_Timer = C_Timer
 local C_EncounterJournal = C_EncounterJournal
@@ -200,19 +203,14 @@ local function merge_two_tables(table_one, table_two)
     return table_one
 end
 
---- Create spell objects for all spell IDs that match the character's class and race and get name/description
+--- Read the cached spells table and get the name/description for each spell inside of it
 local function get_spellbook_spells()
-    local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
+    local spells = IR_Table.SpellCache
     local list = {}
     for _ = 1, #spells do
-        local spell = Spell:CreateFromSpellID(spells[_])
-        if spell:IsSpellEmpty() == false then
-            spell:ContinueOnSpellLoad(function()
-                local desc = spell:GetSpellDescription()
-                local name = spell:GetSpellName()
-                table.insert(list, { spellName = name, description = desc })
-            end)
-        end
+        local name = C_Spell_GetSpellName(spells[_])
+        local desc = C_Spell_GetSpellDescription(spells[_])
+        table.insert(list, { spellName = name, description = desc })
     end
     return list
 end
@@ -1226,6 +1224,12 @@ end
 
 ---Handles the logic for when the player initially logs in or does a /reload
 function IR_Table:Handle_PlayerLogin()
+
+    local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
+    for _ = 1, #spells do
+        C_Spell_RequestLoadSpellData(spells[_])
+    end
+
     if InterruptReminder_FirstLaunch == nil then
         InterruptReminder_FirstLaunch = true
         printInfo('First time loading the add-on? Type /irhelp for more information.')
@@ -1259,15 +1263,6 @@ function IR_Table:Handle_PlayerLogin()
     if InterruptReminder_Table.SelectedStyle == nil then
         InterruptReminder_Table.SelectedStyle = InterruptReminder_Table.Styles['Proc']
     end
-
-    C_Timer.After(1, function()
-        IR_Table:CreateInterface(InterruptReminder_Table)
-        printDebug("Handle_PlayerLogin: Options interface created.")
-    end)
-
-    -- Initial values for IR_Table
-    IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
-    IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
 end
 
 function f:OnEvent(event, ...)
@@ -1287,6 +1282,20 @@ function f:OnEvent(event, ...)
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') then
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
     end
+    if event == 'SPELL_DATA_LOAD_RESULT' then
+        local spellID, success = ...
+        local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
+        if success and tContains(spells, spellID) then
+            table.insert(IR_Table.SpellCache, spellID)
+        end
+        if #IR_Table.SpellCache == #spells then
+            IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
+            IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
+
+            IR_Table:CreateInterface(InterruptReminder_Table)
+            printDebug("Handle_PlayerLogin: Options interface created.")
+        end
+    end
 end
 
 f:RegisterEvent('PLAYER_LOGIN')
@@ -1300,4 +1309,5 @@ f:RegisterEvent('PLAYER_TARGET_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
+f:RegisterEvent('SPELL_DATA_LOAD_RESULT')
 f:SetScript('OnEvent', f.OnEvent)
