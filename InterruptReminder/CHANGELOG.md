@@ -1,3 +1,9 @@
+## v2.4.1
+Bug Fixes:
+
+    Fixed not all spells loading on UI load.
+    
+
 ## v2.4.0
 New Addition:
 
