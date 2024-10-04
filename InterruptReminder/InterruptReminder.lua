@@ -1293,6 +1293,7 @@ function f:OnEvent(event, ...)
             IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
 
             IR_Table:CreateInterface(InterruptReminder_Table)
+            f:UnregisterEvent('SPELL_DATA_LOAD_RESULT')
             printDebug("Handle_PlayerLogin: Options interface created.")
         end
     end

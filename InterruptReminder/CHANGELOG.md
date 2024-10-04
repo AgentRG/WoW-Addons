@@ -1,3 +1,9 @@
+## v2.4.2
+Bug Fixes:
+
+    Fixed the settings UI being stuck in a loop of generation.
+
+
 ## v2.4.1
 Bug Fixes:
 
