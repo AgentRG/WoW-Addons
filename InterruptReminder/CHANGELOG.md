@@ -1,6 +1,12 @@
 ## v2.4.2
 Bug Fixes:
 
+    Further fixed localization other than English by moving to ClassIds and RaceIds
+    Added a localization to translate mod text into other languages in the future
+
+## v2.4.2
+Bug Fixes:
+
     Fixed the settings UI being stuck in a loop of generation.
 
 

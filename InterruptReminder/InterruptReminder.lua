@@ -1,6 +1,10 @@
+local L
+
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
-    Mod_Version = 'Interrupt Reminder Version: 2.4.1',
+    Mod_Version = function()
+        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.3"
+    end,
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
                    'MultiBarLeftButton', 'MultiBar7Button', 'MultiBar6Button', 'MultiBar5Button' },
@@ -11,66 +15,65 @@ local IR_Table = {
     -- Default interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary
     --effect)
     InterruptSpells = {
-        ['Death Knight'] = { 47528 },
-        ['Demon Hunter'] = { 183752 },
-        ['Druid'] = { 78675 },
-        ['Evoker'] = { 351338 },
-        ['Hunter'] = { 147362, 187707 },
-        ['Mage'] = { 2139 },
-        ['Monk'] = { 116705 },
-        ['Paladin'] = { 96231 },
-        ['Priest'] = { 15487 },
-        ['Rogue'] = { 1766 },
-        ['Shaman'] = { 57994 },
-        ['Warlock'] = { 19647, 115781, 89766 },
-        ['Warrior'] = { 6552 }
+        [6] = { 47528 }, --Death Knight
+        [12] = { 183752 }, --Demon Hunter
+        [11] = { 78675 }, --Druid
+        [13] = { 351338 }, --Evoker
+        [3] = { 147362, 187707 }, --Hunter
+        [8] = { 2139 }, --Mage
+        [10] = { 116705 }, --Monk
+        [2] = { 96231 }, --Paladin
+        [5] = { 15487 }, --Priest
+        [4] = { 1766 }, --Rogue
+        [7] = { 57994 }, --Shaman
+        [9] = { 19647, 115781, 89766 }, --Warlock
+        [1] = { 6552 } --Warrior
     },
     CCSpells = {
-        ['Death Knight'] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]],
-                             444010 --[[Death Charge]], 207167 --[[Blinding Sleet]], 374049 --[[Suppression]],
-                             206970 --[[Tightening Grasp]] },
-        ['Demon Hunter'] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]],
-                             211881 --[[Fel Eruption]], 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]],
-                             179057 --[[Chaos Nova]], 452403 --[[Wave of Debilitation]]},
-        ['Druid'] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
-                      33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
-                      102359 --[[Mass Entanglement]] },
-        ['Evoker'] = { 351338 --[[Quell]], 360806 --[[Sleep Walk]] },
-        ['Hunter'] = { 147362 --[[Counter Shot]], 187707 --[[Muzzle]], 187650 --[[Freezing Trap]],
-                       1513 --[[Scare Beast]], 109248 --[[Binding Shot]], 19577 --[[Intimidation]],
-                       186387 --[[Bursting Shot]], 213691 --[[Scatter Shot]], 236776 --[[High Explosive Trap]],
-                       462031 --[[Implosive Trap]], 355589 --[[Wailing Arrow]]},
-        ['Mage'] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
-                     157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
-                     157980 --[[Supernova]]},
-        ['Monk'] = { 117952 --[[Crackling Jade Lightning]], 119381 --[[Leg Sweep]], 115078 --[[Paralysis]],
-                     198898 --[[Song of Chi-Ji]], 116705 --[[Spear Hand Strike]]},
-        ['Paladin'] = { 853 --[[Hammer of Justice]], 31935 --[[Avenger's Shield]], 255937 --[[Wake of Ashes]],
-                        20066 --[[Repentance]], 115750 --[[Blinding Light]], 96231 --[[Rebuke]], 10326 --[[Turn Evil]]},
-        ['Priest'] = { 64044 --[[Psychic Horror]], 8122 --[[Psychic Scream]], 88625 --[[Holy Word: Chastise]],
-                       34914 --[[Vampiric Touch]], 15487 --[[Silence]], 605 --[[Mind Control]],
-                       205364 --[[Dominate Mind]]},
-        ['Rogue'] = { 1833 --[[Cheap Shot]], 1766 --[[Kick]], 408 --[[Kidney Shot]], 2094 --[[Blind]],
-                      1776 --[[Gouge]]},
-        ['Shaman'] = { 188389 --[[Flame Shock]], 197214 --[[Sundering]], 462620 --[[Earthquake (At target)]],
-                       61882 --[[Earthquake (Selected location]], 192058 --[[Capacitor Totem]],
-                       305483 --[[Lightning Lasso]], 51490 --[[Thunderstorm]], 57994 --[[Wind Shear]], 51514 --[[Hex]]},
-        ['Warlock'] = { 5782 --[[Fear]], 316099 --[[Unstable Affliction]], 1122 --[[Summon Infernal]],
-                        30283 --[[Shadowfury]], 5484 --[[Howl of Terror]], 6789 --[[Mortal Coil]],
-                        19647 --[[Spell Lock]], 115781 --[[Optical Blast]], 89766 --[[Axe Toss]]},
-        ['Warrior'] = { 6552 --[[Pummel]], 386071 --[[Disrupting Shout]], 385952 --[[Shield Charge]],
-                        107570 --[[Storm Bolt]], 46968 --[[Shockwave]], 5246 --[[Intimidating Shout]] }
+        [6] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]], 444010 --[[Death Charge]],
+                207167 --[[Blinding Sleet]], 374049 --[[Suppression]], 206970 --[[Tightening Grasp]] },
+        [12] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]], 211881 --[[Fel Eruption]],
+                 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]], 179057 --[[Chaos Nova]],
+                 452403 --[[Wave of Debilitation]]},
+        [11] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
+                 33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
+                 102359 --[[Mass Entanglement]] },
+        [13] = { 351338 --[[Quell]], 360806 --[[Sleep Walk]] },
+        [3] = { 147362 --[[Counter Shot]], 187707 --[[Muzzle]], 187650 --[[Freezing Trap]], 1513 --[[Scare Beast]],
+                109248 --[[Binding Shot]], 19577 --[[Intimidation]], 186387 --[[Bursting Shot]],
+                213691 --[[Scatter Shot]], 236776 --[[High Explosive Trap]], 462031 --[[Implosive Trap]],
+                355589 --[[Wailing Arrow]]},
+        [8] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
+                157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
+                157980 --[[Supernova]]},
+        [10] = { 117952 --[[Crackling Jade Lightning]], 119381 --[[Leg Sweep]], 115078 --[[Paralysis]],
+                 198898 --[[Song of Chi-Ji]], 116705 --[[Spear Hand Strike]]},
+        [2] = { 853 --[[Hammer of Justice]], 31935 --[[Avenger's Shield]], 255937 --[[Wake of Ashes]],
+                20066 --[[Repentance]], 115750 --[[Blinding Light]], 96231 --[[Rebuke]], 10326 --[[Turn Evil]]},
+        [5] = { 64044 --[[Psychic Horror]], 8122 --[[Psychic Scream]], 88625 --[[Holy Word: Chastise]],
+                34914 --[[Vampiric Touch]], 15487 --[[Silence]], 605 --[[Mind Control]],
+                205364 --[[Dominate Mind]]},
+        [4] = { 1833 --[[Cheap Shot]], 1766 --[[Kick]], 408 --[[Kidney Shot]], 2094 --[[Blind]], 1776 --[[Gouge]]},
+        [7] = { 188389 --[[Flame Shock]], 197214 --[[Sundering]], 462620 --[[Earthquake (At target)]],
+                61882 --[[Earthquake (Selected location]], 192058 --[[Capacitor Totem]], 305483 --[[Lightning Lasso]],
+                51490 --[[Thunderstorm]], 57994 --[[Wind Shear]], 51514 --[[Hex]]},
+        [9] = { 5782 --[[Fear]], 316099 --[[Unstable Affliction]], 1122 --[[Summon Infernal]], 30283 --[[Shadowfury]],
+                5484 --[[Howl of Terror]], 6789 --[[Mortal Coil]], 19647 --[[Spell Lock]],
+                115781 --[[Optical Blast]], 89766 --[[Axe Toss]]},
+        [1] = { 6552 --[[Pummel]], 386071 --[[Disrupting Shout]], 385952 --[[Shield Charge]], 107570 --[[Storm Bolt]],
+                46968 --[[Shockwave]], 5246 --[[Intimidating Shout]] }
     },
     RaceSpells = {
-        ['Dracthyr'] = { 368970 --[[Tail Swipe]], 357214 --[[Wing Buffet]] },
-        ['Kul Tiran'] = { 287712 --[[Haymaker]] },
-        ['Tauren'] = { 20549 --[[War Stomp]] },
-        ['Highmountain Tauren'] = { 255654 --[[Bull Rush]] },
-        ['Pandaren'] = { 107079 --[[Quaking Palm]] },
-        ['Earthen'] = {}, ['Dwarf'] = {}, ['Void Elf'] = {}, ['Vulpera'] = {}, ['Night Elf'] = {},
-        ['Dark Iron Dwarf'] = {}, ['Blood Elf'] = {}, ['Human'] = {}, ['Zandalari Troll'] = {}, ['Orc'] = {},
-        ['Nightborne'] = {}, ['Worgen'] = {}, ['Draenei'] = {}, ["Mag'har Orc"] = {}, ['Goblin'] = {},
-        ['Mechagnome'] = {}, ['Lightforged Draenei'] = {}, ['Undead'] = {}, ['Troll'] = {}, ['Gnome'] = {}
+        [52] = { 368970 --[[Tail Swipe]], 357214 --[[Wing Buffet]] }, --Dracthyr (Alliance)
+        [70] = { 368970 --[[Tail Swipe]], 357214 --[[Wing Buffet]] }, --Dracthyr (Horde)
+        [32] = { 287712 --[[Haymaker]] }, --Kul Tiran
+        [6] = { 20549 --[[War Stomp]] }, --Tauren
+        [28] = { 255654 --[[Bull Rush]] }, --Highmountain Tauren
+        [24] = { 107079 --[[Quaking Palm]] }, --Pandaren (Neutral)
+        [25] = { 107079 --[[Quaking Palm]] }, --Pandaren (Alliance)
+        [26] = { 107079 --[[Quaking Palm]] }, --Pandaren (Horde)
+        [84] = {}, [3] = {}, [29] = {}, [35] = {}, [4] = {}, [34] = {}, [10] = {}, [33] = {}, [31] = {}, [2] = {},
+        [27] = {}, [22] = {}, [11] = {}, [36] = {}, [9] = {}, [37] = {}, [30] = {}, [5] = {}, [8] = {}, [7] = {}
     },
     SpellCache = {},
     SaveHidden = true,
@@ -90,8 +93,8 @@ local IR_Table = {
 }
 
 local f = CreateFrame('Frame', 'InterruptReminder')
-local PlayerClass = UnitClass('player')
-local PlayerRace = UnitRace('player')
+local PlayerClass = select(3, UnitClass('player'))
+local PlayerRace = select(3, UnitRace('player'))
 local CheckButtonFramePool
 
 -- Library used to highlight spells. Without the library, the addon will encounter protected action access error
@@ -330,6 +333,8 @@ end
 ---Options frame
 function IR_Table:CreateInterface(self)
 
+    L = InterruptReminder_Localization
+
     local about_mod_hover = CreateFrame("Frame", nil, IR_Table.Panel)
     local about_mod_frame = CreateFrame("Frame", nil, IR_Table.Panel, 'BackdropTemplate')
     local save_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
@@ -356,7 +361,7 @@ function IR_Table:CreateInterface(self)
     local horizontal_line_top = IR_Table.Panel:CreateLine()
     local horizontal_line_bottom = IR_Table.Panel:CreateLine()
 
-    version_text:SetText(IR_Table.Mod_Version)
+    version_text:SetText(IR_Table.Mod_Version())
     version_text:SetPoint("BOTTOMLEFT", 8, 0)
     version_text:Show()
 
@@ -414,7 +419,7 @@ function IR_Table:CreateInterface(self)
     local function generate_spell_glow_checkboxes()
         local checkboxes = { proc_glow_checkbox, glow_glow_checkbox, pixel_glow_checkbox, cast_glow_checkbox }
         local sliders = { r_slider, g_slider, b_slider, a_slider, n_slider, t_slider, f_slider, s_slider }
-        local names = { 'Proc', 'Glow', 'Pixel', 'Cast' }
+        local names = { L["PROC"], L["GLOW"], L["PIXEL"], L["CAST"] }
         local load_data = { 'glow', 'pixel', 'cast' }
         local x = 8
 
@@ -477,7 +482,7 @@ function IR_Table:CreateInterface(self)
     --- Create all sliders and fill in the relevant data for the them where appropriate, as well as the OnMouseUp script
     local function generate_sliders()
         local sliders = { r_slider, g_slider, b_slider, a_slider, n_slider, t_slider, f_slider, s_slider }
-        local text = { "Red", "Green", "Blue", "Alpha", "Lines", "Thickness", "Frequency", "Scale" }
+        local text = { L["RED"], L["GREEN"], L["BLUE"], L["ALPHA"], L["LINES"], L["THICKNESS"], L["FREQUENCY"], L["SCALE"] }
         local global_text = { "RSlider", "GSlider", "BSlider", "ASlider", "NSlider", "TSlider", "FSlider", "SSlider" }
         local y = -367
         local scripts = { function()
@@ -666,7 +671,7 @@ function IR_Table:CreateInterface(self)
     --- OnClick script
     local function generate_header_checkboxes()
         local checkboxes = { debug_mode, play_sound }
-        local text = { 'Enable Debugger', 'Enable Audio Cue' }
+        local text = { L['ENABLE_DEBUGGER'], L['ENABLE_AUDIO_CUE'] }
         local tooltip = { 'Enable the debugger for event handling and other functions.', 'Play a sound when the target is casting an interruptible spell.' }
         local x = 8
         local scripts = { function(checkbox)
@@ -727,7 +732,7 @@ function IR_Table:CreateInterface(self)
     --- Create all spell-related buttons and fill in the relevant data for the them where appropriate, as well as the OnClick script
     local function generate_buttons()
         local buttons = { save_button, cancel_button }
-        local text = { 'Save Spells', 'Cancel' }
+        local text = { L['SAVE_SPELLS'], L['CANCEL'] }
         local x = -50
         local scripts = { function()
             enable_and_disable_mouse_frames(buttons, nil)
@@ -761,7 +766,7 @@ function IR_Table:CreateInterface(self)
 
     --- If one of the checkboxes were checked but changes were not saved, this warning will appear.
     save_warning_text:Hide()
-    save_warning_text:SetText("You have unsaved changes!")
+    save_warning_text:SetText(L["UNSAVED_CHANGES"])
     save_warning_text:SetTextColor(1.0, 0, 0, 1)
     save_warning_text:SetPoint("BOTTOM", 0, 325)
 
@@ -809,12 +814,7 @@ function IR_Table:CreateInterface(self)
     about_mod_text:SetSize(650, 290)
     about_mod_text:SetJustifyH("LEFT")
     about_mod_text:SetJustifyV("TOP");
-    about_mod_text:SetText("About the mod:\n\n" ..
-            "• If the current mob is a boss, class interrupt spells will be highlighted instead of user selections.\n\n" ..
-            "• The debugger is mainly for developer use. Enabling it will cause a lot of chat noise.\n\n" ..
-            "• Please let the developer of any bugs you come across at either the GitHub repository, CurseForge or" ..
-            " WoWInterface.\n\n" ..
-            "• Please let the developer know if any spells are missing from the list of spells available for selection.")
+    about_mod_text:SetText(L["ABOUT_MOD"])
     about_mod_text:SetWordWrap(true)
 
     --- Pre-run certain scripts
