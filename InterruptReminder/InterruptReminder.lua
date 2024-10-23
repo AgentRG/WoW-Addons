@@ -3,7 +3,7 @@ local L
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
     Mod_Version = function()
-        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.3"
+        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.4"
     end,
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
@@ -33,8 +33,7 @@ local IR_Table = {
         [6] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]], 444010 --[[Death Charge]],
                 207167 --[[Blinding Sleet]], 374049 --[[Suppression]], 206970 --[[Tightening Grasp]] },
         [12] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]], 211881 --[[Fel Eruption]],
-                 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]], 179057 --[[Chaos Nova]],
-                 452403 --[[Wave of Debilitation]]},
+                 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]], 179057 --[[Chaos Nova]] },
         [11] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
                  33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
                  102359 --[[Mass Entanglement]] },
@@ -72,8 +71,10 @@ local IR_Table = {
         [24] = { 107079 --[[Quaking Palm]] }, --Pandaren (Neutral)
         [25] = { 107079 --[[Quaking Palm]] }, --Pandaren (Alliance)
         [26] = { 107079 --[[Quaking Palm]] }, --Pandaren (Horde)
-        [84] = {}, [3] = {}, [29] = {}, [35] = {}, [4] = {}, [34] = {}, [10] = {}, [33] = {}, [31] = {}, [2] = {},
-        [27] = {}, [22] = {}, [11] = {}, [36] = {}, [9] = {}, [37] = {}, [30] = {}, [5] = {}, [8] = {}, [7] = {}
+        [84] = {}, [1] = {}, [3] = {}, [29] = {}, [35] = {}, [4] = {}, [34] = {}, [10] = {}, [33] = {}, [31] = {},
+        [2] = {}, [27] = {}, [22] = {}, [11] = {}, [36] = {}, [9] = {}, [37] = {}, [30] = {}, [5] = {}, [8] = {},
+        [7] = {}, [12] = {}, [13] = {}, [14] = {}, [15] = {}, [16] = {}, [17] = {}, [18] = {}, [19] = {}, [20] = {},
+        [21] = {}, [23] = {}, [85] = {}
     },
     SpellCache = {},
     SaveHidden = true,
@@ -109,13 +110,13 @@ local UnitChannelInfo = UnitChannelInfo
 local tContains = tContains
 local GetUnitName = GetUnitName
 local UnitClassification = UnitClassification
-local HasAction = HasAction
 local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
 local C_Spell_GetSpellName = C_Spell.GetSpellName
 local C_Spell_GetSpellDescription = C_Spell.GetSpellDescription
 local C_Spell_RequestLoadSpellData = C_Spell.RequestLoadSpellData
 local GetTime = GetTime
 local C_Timer = C_Timer
+local C_ActionBar = C_ActionBar
 local C_EncounterJournal = C_EncounterJournal
 local EJ_GetCreatureInfo = EJ_GetCreatureInfo
 local UnitCanAttack = UnitCanAttack
@@ -169,11 +170,10 @@ end
 
 --- Remove duplicates in a table and return the table
 local function remove_duplicates_from_array(input_table)
-    local currentCopy = input_table
     local hash = {}
     local res = {}
 
-    for _, v in pairs(currentCopy) do
+    for _, v in pairs(input_table) do
         if (not hash[v]) then
             res[#res + 1] = v
             hash[v] = true
@@ -206,6 +206,38 @@ local function merge_two_tables(table_one, table_two)
     return table_one
 end
 
+local function create_global_table()
+    if InterruptReminder_Table == nil then
+        InterruptReminder_Table = {}
+    end
+    if InterruptReminder_Table['Spells'] == nil then
+        InterruptReminder_Table['Spells'] = {}
+    end
+    if InterruptReminder_Table['SelectedSpells'] == nil then
+        InterruptReminder_Table['SelectedSpells'] = IR_Table.InterruptSpells[PlayerClass]
+    end
+    if InterruptReminder_Table['CurrentBossList'] == nil then
+        InterruptReminder_Table['CurrentBossList'] = {}
+    end
+    if InterruptReminder_Table['Debug'] == nil then
+        InterruptReminder_Table['Debug'] = false
+    end
+    if InterruptReminder_Table['PlaySound'] == nil then
+        InterruptReminder_Table['PlaySound'] = false
+    end
+    if InterruptReminder_Table['Styles'] == nil then
+        InterruptReminder_Table['Styles'] = {
+            ['Pixel'] = { name = 'Pixel', color = { 0.95, 0.95, 0.32, 1 }, N = 8, thickness = 2, border = true },
+            ['Cast'] = { name = 'Cast', color = { 0.95, 0.95, 0.32, 1 }, N = 4, frequency = 0.125, scale = 1 },
+            ['Glow'] = { name = 'Glow', color = { 0.95, 0.98, 0.65, 1 }, frequency = 0.125 },
+            ['Proc'] = { name = 'Proc' }
+        }
+    end
+    if InterruptReminder_Table['SelectedStyle'] == nil then
+        InterruptReminder_Table['SelectedStyle'] = InterruptReminder_Table.Styles['Proc']
+    end
+end
+
 --- Read the cached spells table and get the name/description for each spell inside of it
 local function get_spellbook_spells()
     local spells = IR_Table.SpellCache
@@ -213,7 +245,7 @@ local function get_spellbook_spells()
     for _ = 1, #spells do
         local name = C_Spell_GetSpellName(spells[_])
         local desc = C_Spell_GetSpellDescription(spells[_])
-        table.insert(list, { spellName = name, description = desc })
+        table.insert(list, { spellID = spells[_], spellName = name, description = desc })
     end
     return list
 end
@@ -625,11 +657,13 @@ function IR_Table:CreateInterface(self)
         local checkedSpells = self.SelectedSpells
 
         for i = 1, #spells do
+            local spellID = spells[i].spellID
             local spell_name = spells[i].spellName
             local spell_description = spells[i].description
             local checkbox = CheckButtonFramePool[i].frame
             checkbox.Text:SetText(spell_name)
             checkbox.tooltip = spell_description
+            checkbox:SetAttribute('SpellID', spellID)
             if tContains(checkedSpells, spell_name) then
                 checkbox:SetChecked(true)
             else
@@ -923,32 +957,42 @@ end
 ---Return the button location of the spell from the cached ButtonCache. If there is no cache for the button or the
 --- slot has been updated, then find the location of the button and save it to ButtonCache.
 function IR_Table:FindSpellLocation(spell)
-    spell = string.lower(spell)
 
     local function find_button()
         local actionBars
+        local uiType
 
         if C_AddOns_IsAddOnLoaded("ElvUI") == true then
             actionBars = IR_Table.ElvUIActionBars
+            uiType = 'ElvUI'
         else
             actionBars = IR_Table.ActionBars
+            uiType = 'Default'
         end
         for _, barName in ipairs(actionBars) do
             for i = 1, 12 do
+                local spellID
+                local actionSlot
                 local button = _G[barName .. i]
-                local slot = button:GetAttribute('action') or button:GetPagedID()
-
-                if HasAction(slot) then
-                    local actionType, id, _, actionName = GetActionInfo(slot)
-
-                    if actionType == 'spell' then
-                        local spellInfo = C_Spell_GetSpellInfo(id)
-                        actionName = spellInfo.name
-                    end
-
-                    if actionName then
-                        if string.lower(actionName) == spell then
-                            IR_Table.ButtonCache[spell] = { button = button, slot = slot }
+                if button then
+                    if uiType == 'Default' then
+                        actionSlot = button['action']
+                        spellID = C_ActionBar.GetSpell(actionSlot)
+                        if spellID then
+                            local spellName = C_Spell_GetSpellName(spellID)
+                            if spellName == spell then
+                                IR_Table.ButtonCache[spell] = { button = button, slot = actionSlot }
+                            end
+                        end
+                    elseif uiType == 'ElvUI' then
+                        spellID = button['abilityID']
+                        actionSlot = button
+                        if spellID then
+                            local spellName = C_Spell_GetSpellName(spellID)
+                            if spellName == spell then
+                                actionSlot = button:GetAttribute('action')
+                                IR_Table.ButtonCache[spell] = { button = button, slot = actionSlot }
+                            end
                         end
                     end
                 end
@@ -1234,35 +1278,7 @@ function IR_Table:Handle_PlayerLogin()
         InterruptReminder_FirstLaunch = true
         printInfo('First time loading the add-on? Type /irhelp for more information.')
     end
-    if InterruptReminder_Table == nil then
-        InterruptReminder_Table = {}
-    end
-    if InterruptReminder_Table.Spells == nil then
-        InterruptReminder_Table.Spells = {}
-    end
-    if InterruptReminder_Table.SelectedSpells == nil then
-        InterruptReminder_Table.SelectedSpells = IR_Table.InterruptSpells[PlayerClass]
-    end
-    if InterruptReminder_Table.CurrentBossList == nil then
-        InterruptReminder_Table.CurrentBossList = {}
-    end
-    if InterruptReminder_Table.Debug == nil then
-        InterruptReminder_Table.Debug = false
-    end
-    if InterruptReminder_Table.PlaySound == nil then
-        InterruptReminder_Table.PlaySound = false
-    end
-    if InterruptReminder_Table.Styles == nil then
-        InterruptReminder_Table.Styles = {
-            ['Pixel'] = { name = 'Pixel', color = { 0.95, 0.95, 0.32, 1 }, N = 8, thickness = 2, border = true },
-            ['Cast'] = { name = 'Cast', color = { 0.95, 0.95, 0.32, 1 }, N = 4, frequency = 0.125, scale = 1 },
-            ['Glow'] = { name = 'Glow', color = { 0.95, 0.98, 0.65, 1 }, frequency = 0.125 },
-            ['Proc'] = { name = 'Proc' }
-        }
-    end
-    if InterruptReminder_Table.SelectedStyle == nil then
-        InterruptReminder_Table.SelectedStyle = InterruptReminder_Table.Styles['Proc']
-    end
+    create_global_table()
 end
 
 function f:OnEvent(event, ...)
@@ -1283,14 +1299,19 @@ function f:OnEvent(event, ...)
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
     end
     if event == 'SPELL_DATA_LOAD_RESULT' then
+        create_global_table()
         local spellID, success = ...
         local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
         if success and tContains(spells, spellID) then
             table.insert(IR_Table.SpellCache, spellID)
         end
+
+        IR_Table.SpellCache = remove_duplicates_from_array(IR_Table.SpellCache) -- Needed in case another mod requests same spell data
+
         if #IR_Table.SpellCache == #spells then
             IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
             IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
+
 
             IR_Table:CreateInterface(InterruptReminder_Table)
             f:UnregisterEvent('SPELL_DATA_LOAD_RESULT')
