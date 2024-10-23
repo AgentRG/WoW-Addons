@@ -1,4 +1,18 @@
-## v2.4.2
+## v2.4.4
+General Changes:
+
+    Revamped logic that would find the spells in the action bar.
+    Moved around when the mods global table is being generated.
+    Added localization for Portuguese, Chinese, French, German, Italian, Spanish, Korea and Russian (Created using AI, hopefully no spellling mistakes).
+
+Bug Fixes:
+
+    Removed a talent from Demon Hunter that was mistaken for a spell.
+    Added missing RaceIDs to the mod table when pulling race spells.
+    Fixed duplicate spells appearing in the list of spells due to other addons requesting spell data.
+
+
+## v2.4.3
 Bug Fixes:
 
     Further fixed localization other than English by moving to ClassIds and RaceIds
