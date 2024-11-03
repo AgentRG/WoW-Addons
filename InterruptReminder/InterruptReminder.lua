@@ -3,7 +3,7 @@ local L
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
     Mod_Version = function()
-        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.4"
+        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.5"
     end,
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
