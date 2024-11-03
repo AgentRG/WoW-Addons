@@ -1,3 +1,8 @@
+## v2.4.5
+General Changes:
+
+    Supporting latest TOC version
+
 ## v2.4.4
 General Changes:
 
