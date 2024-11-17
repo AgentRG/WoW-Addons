@@ -1,5 +1,5 @@
-## Interface: 110002
-## Version: 1.1.0
+## Interface: 110005
+## Version: 1.1.1
 ## Title: Heart Attack
 ## Author: AgentRG
 ## SavedVariablesPerCharacter: HeartAttack_FirstTimeDone, HeartAttack_GlobalTable

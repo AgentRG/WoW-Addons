@@ -1,5 +1,5 @@
-## Interface: 110002
-## Version: 1.0.6
+## Interface: 110005
+## Version: 1.0.7
 ## Title: Humorous Death
 ## Author: AgentRG
 ## SavedVariablesPerCharacter: HumorousDeath_IterateInt, HumorousDeath_Setting, HumorousDeath_FirstTimeDone

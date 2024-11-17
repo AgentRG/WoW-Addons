@@ -1,5 +1,5 @@
-## Interface: 110002
-## Version: 1.0.1
+## Interface: 110005
+## Version: 1.0.2
 ## Title: Zoomer WoW
 ## Author: AgentRG
 
