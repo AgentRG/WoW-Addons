@@ -1,5 +1,5 @@
 ## Interface: 40400
-## Version: 2.2.0
+## Version: 2.4.4
 ## Title: Interrupt Reminder
 ## Author: AgentRG
 ## OptionalDeps: LibCustomGlow-1.0

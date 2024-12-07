@@ -1,3 +1,74 @@
+## v2.4.5
+General Changes:
+
+    Supporting latest TOC version
+
+## v2.4.4
+General Changes:
+
+    Revamped logic that would find the spells in the action bar.
+    Moved around when the mods global table is being generated.
+    Added localization for Portuguese, Chinese, French, German, Italian, Spanish, Korea and Russian (Created using AI, hopefully no spellling mistakes).
+
+Bug Fixes:
+
+    Removed a talent from Demon Hunter that was mistaken for a spell.
+    Added missing RaceIDs to the mod table when pulling race spells.
+    Fixed duplicate spells appearing in the list of spells due to other addons requesting spell data.
+
+
+## v2.4.3
+Bug Fixes:
+
+    Further fixed localization other than English by moving to ClassIds and RaceIds
+    Added a localization to translate mod text into other languages in the future
+
+## v2.4.2
+Bug Fixes:
+
+    Fixed the settings UI being stuck in a loop of generation.
+
+
+## v2.4.1
+Bug Fixes:
+
+    Fixed not all spells loading on UI load.
+    
+
+## v2.4.0
+New Addition:
+
+    Migrated from smart spell lookup based on keywords to hardcoded spell IDs based on character class/race.
+    The reasoning being that support for multiple languages would be impossibly difficult to support.
+
+    Plus due to frequent updates, I often had to exclude specific spells that got picked up by the mod because they
+    matched the lookup, but did not meet the correct criteria.
+
+    Cataclysm version of the mod is still using the old lookup logic. I do not plan to update that version of the mod
+    as I do not play classic enough (or at all) to see myself spending time supporting it, but I am looking for volunteers!
+
+General Changes:
+    
+    Removed all code related to smart lookup of spells.
+    Added add-on version number to bottom left of config window.
+    Rewrote some parts in the about-mod section.
+    
+
+## v2.3.1
+Bug Fixes:
+
+    Fixed null exception for spells that the player character does not have unlocked.
+
+## v2.3.0
+General Changes:
+
+    Migrated old functions used to gather information about spells to be gathered from C classes.
+
+Bug Fixes:
+
+    Fixed settings menu initialization.
+    Fixed extraneous spell showing up for Evokers.
+
 ## v2.2.0
 New Addition:
     

@@ -1,5 +1,5 @@
-## Interface: 100206
-## Version: 1.0.2
+## Interface: 110005
+## Version: 1.0.4
 ## Title: Talking Head - Shut!
 ## Author: AgentRG
 ## IconTexture: Interface\AddOns\TalkingHeadShut\icon.png
