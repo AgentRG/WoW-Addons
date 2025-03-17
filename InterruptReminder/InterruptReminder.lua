@@ -3,7 +3,7 @@ local L
 -- Table from which the add-on retrieves and stores all runtime data about the target, player, and more.
 local IR_Table = {
     Mod_Version = function()
-        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.5"
+        return "Interrupt Reminder ".. L["VERSION"] ..": 2.4.6"
     end,
     -- WoW default action bar names
     ActionBars = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton', 'MultiBarRightButton',
@@ -15,52 +15,52 @@ local IR_Table = {
     -- Default interrupts for all classes. These spell's primarily goal is to interrupt (with sometimes a secondary
     --effect)
     InterruptSpells = {
-        [6] = { 47528 }, --Death Knight
-        [12] = { 183752 }, --Demon Hunter
-        [11] = { 78675 }, --Druid
-        [13] = { 351338 }, --Evoker
-        [3] = { 147362, 187707 }, --Hunter
-        [8] = { 2139 }, --Mage
-        [10] = { 116705 }, --Monk
+        [1] = { 6552 }, --Warrior
         [2] = { 96231 }, --Paladin
-        [5] = { 15487 }, --Priest
+        [3] = { 147362, 187707 }, --Hunter
         [4] = { 1766 }, --Rogue
+        [5] = { 15487 }, --Priest
+        [6] = { 47528 }, --Death Knight
         [7] = { 57994 }, --Shaman
+        [8] = { 2139 }, --Mage
         [9] = { 19647, 115781, 89766 }, --Warlock
-        [1] = { 6552 } --Warrior
+        [10] = { 116705 }, --Monk
+        [11] = { 78675 }, --Druid
+        [12] = { 183752 }, --Demon Hunter
+        [13] = { 351338 } --Evoker
     },
     CCSpells = {
-        [6] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]], 444010 --[[Death Charge]],
-                207167 --[[Blinding Sleet]], 374049 --[[Suppression]], 206970 --[[Tightening Grasp]] },
-        [12] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]], 211881 --[[Fel Eruption]],
-                 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]], 179057 --[[Chaos Nova]] },
-        [11] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
-                 33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
-                 102359 --[[Mass Entanglement]] },
-        [13] = { 351338 --[[Quell]], 360806 --[[Sleep Walk]] },
+        [1] = { 6552 --[[Pummel]], 386071 --[[Disrupting Shout]], 385952 --[[Shield Charge]], 107570 --[[Storm Bolt]],
+                46968 --[[Shockwave]], 5246 --[[Intimidating Shout]] },
+        [2] = { 853 --[[Hammer of Justice]], 31935 --[[Avenger's Shield]], 255937 --[[Wake of Ashes]],
+                20066 --[[Repentance]], 115750 --[[Blinding Light]], 96231 --[[Rebuke]], 10326 --[[Turn Evil]]},
         [3] = { 147362 --[[Counter Shot]], 187707 --[[Muzzle]], 187650 --[[Freezing Trap]], 1513 --[[Scare Beast]],
                 109248 --[[Binding Shot]], 19577 --[[Intimidation]], 186387 --[[Bursting Shot]],
                 213691 --[[Scatter Shot]], 236776 --[[High Explosive Trap]], 462031 --[[Implosive Trap]],
                 355589 --[[Wailing Arrow]]},
-        [8] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
-                157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
-                157980 --[[Supernova]]},
-        [10] = { 117952 --[[Crackling Jade Lightning]], 119381 --[[Leg Sweep]], 115078 --[[Paralysis]],
-                 198898 --[[Song of Chi-Ji]], 116705 --[[Spear Hand Strike]]},
-        [2] = { 853 --[[Hammer of Justice]], 31935 --[[Avenger's Shield]], 255937 --[[Wake of Ashes]],
-                20066 --[[Repentance]], 115750 --[[Blinding Light]], 96231 --[[Rebuke]], 10326 --[[Turn Evil]]},
+        [4] = { 1833 --[[Cheap Shot]], 1766 --[[Kick]], 408 --[[Kidney Shot]], 2094 --[[Blind]], 1776 --[[Gouge]]},
         [5] = { 64044 --[[Psychic Horror]], 8122 --[[Psychic Scream]], 88625 --[[Holy Word: Chastise]],
                 34914 --[[Vampiric Touch]], 15487 --[[Silence]], 605 --[[Mind Control]],
                 205364 --[[Dominate Mind]]},
-        [4] = { 1833 --[[Cheap Shot]], 1766 --[[Kick]], 408 --[[Kidney Shot]], 2094 --[[Blind]], 1776 --[[Gouge]]},
+        [6] = { 47528 --[[Mind freeze]], 221562 --[[Asphyxiate]], 108194 --[[Asphyxiate]], 444010 --[[Death Charge]],
+                207167 --[[Blinding Sleet]], 374049 --[[Suppression]], 206970 --[[Tightening Grasp]] },
         [7] = { 188389 --[[Flame Shock]], 197214 --[[Sundering]], 462620 --[[Earthquake (At target)]],
                 61882 --[[Earthquake (Selected location]], 192058 --[[Capacitor Totem]], 305483 --[[Lightning Lasso]],
                 51490 --[[Thunderstorm]], 57994 --[[Wind Shear]], 51514 --[[Hex]]},
+        [8] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
+                157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
+                157980 --[[Supernova]]},
         [9] = { 5782 --[[Fear]], 316099 --[[Unstable Affliction]], 1122 --[[Summon Infernal]], 30283 --[[Shadowfury]],
                 5484 --[[Howl of Terror]], 6789 --[[Mortal Coil]], 19647 --[[Spell Lock]],
                 115781 --[[Optical Blast]], 89766 --[[Axe Toss]]},
-        [1] = { 6552 --[[Pummel]], 386071 --[[Disrupting Shout]], 385952 --[[Shield Charge]], 107570 --[[Storm Bolt]],
-                46968 --[[Shockwave]], 5246 --[[Intimidating Shout]] }
+        [10] = { 117952 --[[Crackling Jade Lightning]], 119381 --[[Leg Sweep]], 115078 --[[Paralysis]],
+                 198898 --[[Song of Chi-Ji]], 116705 --[[Spear Hand Strike]]},
+        [11] = { 78675 --[[Solar Beam]], 106839 --[[Skull Bash]], 132469 --[[Typhoon]], 2637 --[[Hibernate]],
+                 33786 --[[Cyclone]], 22570 --[[Maim]], 99 --[[Incapacitating Roar]], 5211 --[[Mighty Bash]],
+                 102359 --[[Mass Entanglement]] },
+        [12] = { 183752 --[[Disrupt]], 217832 --[[Imprison]], 191427 --[[Metamorphosis]], 211881 --[[Fel Eruption]],
+                 202137 --[[Sigil of Silence]], 207684 --[[Sigil of Misery]], 179057 --[[Chaos Nova]] },
+        [13] = { 351338 --[[Quell]], 360806 --[[Sleep Walk]] }
     },
     RaceSpells = {
         [52] = { 368970 --[[Tail Swipe]], 357214 --[[Wing Buffet]] }, --Dracthyr (Alliance)
@@ -84,7 +84,6 @@ local IR_Table = {
     IsInterruptible = false,
     TargetCanBeStunned = false,
     CurrentTargetCanBeAttacked = false,
-    SpecializationChanged = false,
     Panel = CreateFrame("Frame", "InterruptReminderSettings"),
     ButtonCache = {},
     GlowCache = nil,
@@ -123,10 +122,10 @@ local UnitCanAttack = UnitCanAttack
 local C_Map = C_Map
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
+local StopSound = StopSound
 local IsPlayerSpell = IsPlayerSpell
 local C_AddOns_IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 local CreateFrame = CreateFrame
-local StopSound = StopSound
 
 -- Local version of Lua global functions for slightly faster runtime access
 local string = string
@@ -183,71 +182,11 @@ local function remove_duplicates_from_array(input_table)
     return input_table
 end
 
---- Remove duplicates in a table based on the key of a nested table
-local function remove_duplicates_from_nested_table(input_table, key)
-    local hash = {}
-    local res = {}
-
-    for _, nestedTable in ipairs(input_table) do
-        local serialized = nestedTable[key]
-        if not hash[serialized] then
-            res[#res + 1] = nestedTable
-            hash[serialized] = true
-        end
-    end
-    input_table = res
-    return input_table
-end
-
 local function merge_two_tables(table_one, table_two)
     for i = 1, #table_two do
         table_one[#table_one + 1] = table_two[i]
     end
     return table_one
-end
-
-local function create_global_table()
-    if InterruptReminder_Table == nil then
-        InterruptReminder_Table = {}
-    end
-    if InterruptReminder_Table['Spells'] == nil then
-        InterruptReminder_Table['Spells'] = {}
-    end
-    if InterruptReminder_Table['SelectedSpells'] == nil then
-        InterruptReminder_Table['SelectedSpells'] = IR_Table.InterruptSpells[PlayerClass]
-    end
-    if InterruptReminder_Table['CurrentBossList'] == nil then
-        InterruptReminder_Table['CurrentBossList'] = {}
-    end
-    if InterruptReminder_Table['Debug'] == nil then
-        InterruptReminder_Table['Debug'] = false
-    end
-    if InterruptReminder_Table['PlaySound'] == nil then
-        InterruptReminder_Table['PlaySound'] = false
-    end
-    if InterruptReminder_Table['Styles'] == nil then
-        InterruptReminder_Table['Styles'] = {
-            ['Pixel'] = { name = 'Pixel', color = { 0.95, 0.95, 0.32, 1 }, N = 8, thickness = 2, border = true },
-            ['Cast'] = { name = 'Cast', color = { 0.95, 0.95, 0.32, 1 }, N = 4, frequency = 0.125, scale = 1 },
-            ['Glow'] = { name = 'Glow', color = { 0.95, 0.98, 0.65, 1 }, frequency = 0.125 },
-            ['Proc'] = { name = 'Proc' }
-        }
-    end
-    if InterruptReminder_Table['SelectedStyle'] == nil then
-        InterruptReminder_Table['SelectedStyle'] = InterruptReminder_Table.Styles['Proc']
-    end
-end
-
---- Read the cached spells table and get the name/description for each spell inside of it
-local function get_spellbook_spells()
-    local spells = IR_Table.SpellCache
-    local list = {}
-    for _ = 1, #spells do
-        local name = C_Spell_GetSpellName(spells[_])
-        local desc = C_Spell_GetSpellDescription(spells[_])
-        table.insert(list, { spellID = spells[_], spellName = name, description = desc })
-    end
-    return list
 end
 
 local function hide_and_show_frames(hide, show)
@@ -314,6 +253,51 @@ local function copy_table(origin)
     end
     return copy
 end
+
+local function create_global_table()
+    if InterruptReminder_Table == nil then
+        InterruptReminder_Table = {}
+    end
+    if InterruptReminder_Table['Spells'] == nil then
+        InterruptReminder_Table['Spells'] = {}
+    end
+    if InterruptReminder_Table['SelectedSpells'] == nil then
+        InterruptReminder_Table['SelectedSpells'] = IR_Table.InterruptSpells[PlayerClass]
+    end
+    if InterruptReminder_Table['CurrentBossList'] == nil then
+        InterruptReminder_Table['CurrentBossList'] = {}
+    end
+    if InterruptReminder_Table['Debug'] == nil then
+        InterruptReminder_Table['Debug'] = false
+    end
+    if InterruptReminder_Table['PlaySound'] == nil then
+        InterruptReminder_Table['PlaySound'] = false
+    end
+    if InterruptReminder_Table['Styles'] == nil then
+        InterruptReminder_Table['Styles'] = {
+            ['Pixel'] = { name = 'Pixel', color = { 0.95, 0.95, 0.32, 1 }, N = 8, thickness = 2, border = true },
+            ['Cast'] = { name = 'Cast', color = { 0.95, 0.95, 0.32, 1 }, N = 4, frequency = 0.125, scale = 1 },
+            ['Glow'] = { name = 'Glow', color = { 0.95, 0.98, 0.65, 1 }, frequency = 0.125 },
+            ['Proc'] = { name = 'Proc' }
+        }
+    end
+    if InterruptReminder_Table['SelectedStyle'] == nil then
+        InterruptReminder_Table['SelectedStyle'] = InterruptReminder_Table.Styles['Proc']
+    end
+end
+
+--- Read the cached spells table and get the name/description for each spell inside of it
+local function get_spellbook_spells()
+    local spells = IR_Table.SpellCache
+    local list = {}
+    for _ = 1, #spells do
+        local name = C_Spell_GetSpellName(spells[_])
+        local desc = C_Spell_GetSpellDescription(spells[_])
+        table.insert(list, { spellID = spells[_], spellName = name, description = desc })
+    end
+    return list
+end
+
 
 ---Returns whenever the player is currently in an instance or in open world
 local function is_in_instance()
@@ -706,7 +690,7 @@ function IR_Table:CreateInterface(self)
     local function generate_header_checkboxes()
         local checkboxes = { debug_mode, play_sound }
         local text = { L['ENABLE_DEBUGGER'], L['ENABLE_AUDIO_CUE'] }
-        local tooltip = { 'Enable the debugger for event handling and other functions.', 'Play a sound when the target is casting an interruptible spell.' }
+        local tooltip = { L["DEBUGGER_DESCRIPTION"], L["AUDIO_CUE_DESCRIPTION"] }
         local x = 8
         local scripts = { function(checkbox)
             if checkbox:GetChecked() == true then
