@@ -1,4 +1,4 @@
-## Interface: 40401
+## Interface: 40402
 ## Version: 2.4.6
 ## Title: Interrupt Reminder
 ## Author: AgentRG

@@ -42,9 +42,7 @@ local IR_Table = {
         [7] = { 188389 --[[Flame Shock]], 197214 --[[Sundering]], 462620 --[[Earthquake (At target)]],
                 61882 --[[Earthquake (Selected location]], 192058 --[[Capacitor Totem]], 305483 --[[Lightning Lasso]],
                 51490 --[[Thunderstorm]], 57994 --[[Wind Shear]], 51514 --[[Hex]]},
-        [8] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 113724 --[[Ring of Frost]],
-                157981 --[[Blast Wave]], 383121 --[[Mass Polymorph]], 31661 --[[Dragon's Breath]],
-                157980 --[[Supernova]]},
+        [8] = { 2139 --[[Counterspell]], 118 --[[Polymorph (Sheep)]], 31661 --[[Dragon's Breath]]},
         [9] = { 5782 --[[Fear]], 316099 --[[Unstable Affliction]], 1122 --[[Summon Infernal]], 30283 --[[Shadowfury]],
                 5484 --[[Howl of Terror]], 6789 --[[Mortal Coil]], 19647 --[[Spell Lock]],
                 115781 --[[Optical Blast]], 89766 --[[Axe Toss]]},
@@ -79,13 +77,18 @@ local IR_Table = {
     IsInterruptible = false,
     TargetCanBeStunned = false,
     CurrentTargetCanBeAttacked = false,
-    panel = CreateFrame("Frame", "InterruptReminderSettings"),
+    Panel = CreateFrame("Frame", "InterruptReminderSettings"),
     ButtonCache = {},
     GlowCache = nil,
     HideCache = nil,
     Sound = "Interface\\AddOns\\InterruptReminder\\Resources\\sound.mp3",
     SoundHandlerID = nil
 }
+
+-- Patch 11.0 new settings initialization
+IR_Table.Panel.name = "Interrupt Reminder"
+local category = Settings.RegisterCanvasLayoutCategory(IR_Table.Panel, IR_Table.Panel.name, IR_Table.Panel.name);
+category.ID = IR_Table.Panel.name
 
 local f = CreateFrame('Frame', 'InterruptReminder')
 local PlayerClass = select(3, UnitClass('player'))
@@ -108,7 +111,6 @@ local UnitClassification = UnitClassification
 local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
 local C_Spell_GetSpellName = C_Spell.GetSpellName
 local C_Spell_GetSpellDescription = C_Spell.GetSpellDescription
-local C_Spell_RequestLoadSpellData = C_Spell.RequestLoadSpellData
 local GetTime = GetTime
 local C_Timer = C_Timer
 --local C_ActionBar = C_ActionBar
@@ -161,7 +163,7 @@ end
 SLASH_INTERRUPT_REMINDER_OPTIONS1 = "/irconfig"
 --- Slash command to open the options menu.
 SlashCmdList['INTERRUPT_REMINDER_OPTIONS'] = function()
-    InterfaceOptionsFrame_OpenToCategory(IR_Table.panel)
+    Settings.OpenToCategory(category.ID)
 end
 
 --- Remove duplicates in a table and return the table
@@ -350,32 +352,30 @@ function IR_Table:CreateInterface(self)
 
     L = InterruptReminder_Localization
 
-    IR_Table.panel.name = "Interrupt Reminder"
-    local about_mod_hover = CreateFrame("Frame", nil, IR_Table.panel)
-    local about_mod_frame = CreateFrame("Frame", nil, IR_Table.panel, 'BackdropTemplate')
-    local save_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local cancel_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local refresh_button = CreateFrame("Button", nil, IR_Table.panel, "UIPanelButtonTemplate")
-    local advanced_spell_mode = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local debug_mode = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local play_sound = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local glow_texture_test = CreateFrame("Frame", nil, IR_Table.panel)
-    local glow_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local pixel_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local cast_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.panel, "ChatConfigCheckButtonTemplate")
-    local save_warning_text = IR_Table.panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    local about_mod_hover = CreateFrame("Frame", nil, IR_Table.Panel)
+    local about_mod_frame = CreateFrame("Frame", nil, IR_Table.Panel, 'BackdropTemplate')
+    local save_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local cancel_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local refresh_button = CreateFrame("Button", nil, IR_Table.Panel, "UIPanelButtonTemplate")
+    local debug_mode = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local play_sound = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local glow_texture_test = CreateFrame("Frame", nil, IR_Table.Panel)
+    local glow_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local pixel_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local cast_glow_checkbox = CreateFrame("CheckButton", nil, IR_Table.Panel, "ChatConfigCheckButtonTemplate")
+    local save_warning_text = IR_Table.Panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     local version_text = IR_Table.Panel:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    local r_slider = CreateFrame("Slider", "RSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local g_slider = CreateFrame("Slider", "GSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local b_slider = CreateFrame("Slider", "BSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local a_slider = CreateFrame("Slider", "ASlider", IR_Table.panel, "OptionsSliderTemplate")
-    local n_slider = CreateFrame("Slider", "NSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local t_slider = CreateFrame("Slider", "TSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local f_slider = CreateFrame("Slider", "FSlider", IR_Table.panel, "OptionsSliderTemplate")
-    local s_slider = CreateFrame("Slider", "SSlider", IR_Table.panel, "OptionsSliderTemplate")
+    local r_slider = CreateFrame("Slider", "RSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local g_slider = CreateFrame("Slider", "GSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local b_slider = CreateFrame("Slider", "BSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local a_slider = CreateFrame("Slider", "ASlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local n_slider = CreateFrame("Slider", "NSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local t_slider = CreateFrame("Slider", "TSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local f_slider = CreateFrame("Slider", "FSlider", IR_Table.Panel, "OptionsSliderTemplate")
+    local s_slider = CreateFrame("Slider", "SSlider", IR_Table.Panel, "OptionsSliderTemplate")
     local about_mod_text = about_mod_frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    local horizontal_line_top = IR_Table.panel:CreateLine()
-    local horizontal_line_bottom = IR_Table.panel:CreateLine()
+    local horizontal_line_top = IR_Table.Panel:CreateLine()
+    local horizontal_line_bottom = IR_Table.Panel:CreateLine()
 
     version_text:SetText(IR_Table.Mod_Version())
     version_text:SetPoint("BOTTOMLEFT", 8, 0)
@@ -867,7 +867,7 @@ function IR_Table:CreateInterface(self)
         glow_glow_checkbox:EnableMouse(false)
     end
 
-    InterfaceOptions_AddCategory(IR_Table.panel, true)
+    Settings.RegisterAddOnCategory(category);
 end
 
 function IR_Table:GetAllCrowdControlSpells(self)
@@ -935,7 +935,7 @@ function IR_Table:FindSpellLocation(spell)
                     local actionType, id, _, actionName = GetActionInfo(button.action)
 
                     if actionType == 'spell' then
-                        actionName = C_Spell_GetSpellInfo(id)
+                        actionName = GetSpellInfo(id)
                     end
                     if actionName then
                         if string.lower(actionName) == spell then
@@ -983,11 +983,11 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
     if spells_table ~= nil then
         for i = 1, #spells_table do
             local spell = spells_table[i]
-            local _, _, _, _, _, _, spellID = C_Spell_GetSpellInfo(spell)
-            if type(spellID) == 'number' then
-                local isInSpellbook = IsPlayerSpell(spellID)
+            local spellInfo = C_Spell_GetSpellInfo(spell)
+            if type(spellInfo.spellID) == 'number' then
+                local isInSpellbook = IsPlayerSpell(spellInfo.spellID)
                 if isInSpellbook then
-                    local start, duration = GetSpellCooldown(spellID)
+                    local start, duration = GetSpellCooldown(spellInfo.spellID)
                     if duration == 0 or duration <= 1.5 --[[Global Cooldown]] then
                         table.insert(readyToCast, { ['location'] = IR_Table:FindSpellLocation(spell) })
                     else
@@ -1205,16 +1205,25 @@ end
 ---Handles the logic for when the player initially logs in or does a /reload
 function IR_Table:Handle_PlayerLogin()
 
+    create_global_table()
+
     local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
     for _ = 1, #spells do
-        C_Spell_RequestLoadSpellData(spells[_])
+        local spell = C_Spell_GetSpellInfo(spells[_])
+        if spell['spellID'] then
+            table.insert(IR_Table.SpellCache, spell['spellID'])
+        end
     end
 
     if InterruptReminder_FirstLaunch == nil then
         InterruptReminder_FirstLaunch = true
         printInfo('First time loading the add-on? Type /irhelp for more information.')
     end
-    create_global_table()
+
+    IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
+    IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
+
+    IR_Table:CreateInterface(InterruptReminder_Table)
 end
 
 function f:OnEvent(event, ...)
@@ -1234,26 +1243,6 @@ function f:OnEvent(event, ...)
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') then
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
     end
-    if event == 'SPELL_DATA_LOAD_RESULT' then
-        create_global_table()
-        local spellID, success = ...
-        local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
-        if success and tContains(spells, spellID) then
-            table.insert(IR_Table.SpellCache, spellID)
-        end
-
-        IR_Table.SpellCache = remove_duplicates_from_array(IR_Table.SpellCache) -- Needed in case another mod requests same spell data
-
-        if #IR_Table.SpellCache == #spells then
-            IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
-            IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
-
-
-            IR_Table:CreateInterface(InterruptReminder_Table)
-            f:UnregisterEvent('SPELL_DATA_LOAD_RESULT')
-            printDebug("Handle_PlayerLogin: Options interface created.")
-        end
-    end
 end
 
 f:RegisterEvent('PLAYER_LOGIN')
@@ -1267,5 +1256,4 @@ f:RegisterEvent('PLAYER_TARGET_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
-f:RegisterEvent('SPELL_DATA_LOAD_RESULT')
 f:SetScript('OnEvent', f.OnEvent)

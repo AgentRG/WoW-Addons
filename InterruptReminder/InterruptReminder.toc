@@ -1,4 +1,4 @@
-## Interface: 110100
+## Interface: 110105
 ## Version: 2.4.6
 ## Title: Interrupt Reminder
 ## Author: AgentRG

@@ -112,7 +112,6 @@ local UnitClassification = UnitClassification
 local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
 local C_Spell_GetSpellName = C_Spell.GetSpellName
 local C_Spell_GetSpellDescription = C_Spell.GetSpellDescription
-local C_Spell_RequestLoadSpellData = C_Spell.RequestLoadSpellData
 local GetTime = GetTime
 local C_Timer = C_Timer
 local C_ActionBar = C_ActionBar
@@ -1253,16 +1252,25 @@ end
 ---Handles the logic for when the player initially logs in or does a /reload
 function IR_Table:Handle_PlayerLogin()
 
+    create_global_table()
+
     local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
     for _ = 1, #spells do
-        C_Spell_RequestLoadSpellData(spells[_])
+        local spell = C_Spell_GetSpellInfo(spells[_])
+        if spell['spellID'] then
+            table.insert(IR_Table.SpellCache, spell['spellID'])
+        end
     end
 
     if InterruptReminder_FirstLaunch == nil then
         InterruptReminder_FirstLaunch = true
         printInfo('First time loading the add-on? Type /irhelp for more information.')
     end
-    create_global_table()
+
+    IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
+    IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
+
+    IR_Table:CreateInterface(InterruptReminder_Table)
 end
 
 function f:OnEvent(event, ...)
@@ -1282,26 +1290,6 @@ function f:OnEvent(event, ...)
     if (event == 'ZONE_CHANGED_NEW_AREA' or event == 'ZONE_CHANGED_INDOORS' or event == 'ZONE_CHANGED') then
         IR_Table:Handle_ZoneChanged(InterruptReminder_Table)
     end
-    if event == 'SPELL_DATA_LOAD_RESULT' then
-        create_global_table()
-        local spellID, success = ...
-        local spells = merge_two_tables(IR_Table.CCSpells[PlayerClass], IR_Table.RaceSpells[PlayerRace])
-        if success and tContains(spells, spellID) then
-            table.insert(IR_Table.SpellCache, spellID)
-        end
-
-        IR_Table.SpellCache = remove_duplicates_from_array(IR_Table.SpellCache) -- Needed in case another mod requests same spell data
-
-        if #IR_Table.SpellCache == #spells then
-            IR_Table.SelectedSpells = InterruptReminder_Table.SelectedSpells
-            IR_Table.SelectedGlow = InterruptReminder_Table.SelectedStyle
-
-
-            IR_Table:CreateInterface(InterruptReminder_Table)
-            f:UnregisterEvent('SPELL_DATA_LOAD_RESULT')
-            printDebug("Handle_PlayerLogin: Options interface created.")
-        end
-    end
 end
 
 f:RegisterEvent('PLAYER_LOGIN')
@@ -1315,5 +1303,4 @@ f:RegisterEvent('PLAYER_TARGET_CHANGED')
 f:RegisterEvent('ZONE_CHANGED')
 f:RegisterEvent('ZONE_CHANGED_NEW_AREA')
 f:RegisterEvent('ZONE_CHANGED_INDOORS')
-f:RegisterEvent('SPELL_DATA_LOAD_RESULT')
 f:SetScript('OnEvent', f.OnEvent)
