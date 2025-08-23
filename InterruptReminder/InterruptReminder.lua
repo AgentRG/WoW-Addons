@@ -122,7 +122,7 @@ local C_Map = C_Map
 local GetInstanceInfo = GetInstanceInfo
 local PlaySoundFile = PlaySoundFile
 local StopSound = StopSound
-local IsPlayerSpell = IsPlayerSpell
+local C_SpellBook_IsSpellKnown = C_SpellBook.IsSpellKnown
 local C_AddOns_IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 local CreateFrame = CreateFrame
 
@@ -1023,7 +1023,7 @@ function IR_Table:GetSpellCooldowns(spells_table, interrupt_only)
             if spellInfo ~= nil then
                 local spellID = spellInfo.spellID
                 if type(spellID) == 'number' then
-                    local isInSpellbook = IsPlayerSpell(spellID)
+                    local isInSpellbook = C_SpellBook_IsSpellKnown(spellID)
                     if isInSpellbook then
                         local spellCooldownInfo = C_Spell_GetSpellCooldown(spellID)
                         local duration = spellCooldownInfo.duration
