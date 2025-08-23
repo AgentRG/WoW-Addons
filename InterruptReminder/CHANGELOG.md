@@ -1,3 +1,14 @@
+## v2.4.7
+General Changes:
+
+    Supporting latest TOC version
+    For retail, now using C_SpellBook.IsSpellKnown instead of IsPlayerSpell
+
+## v2.4.6
+General Changes:
+
+    Supporting latest TOC version
+
 ## v2.4.5
 General Changes:
 
