@@ -41,29 +41,48 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
-          folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
-          
-          mkdir -p _zips
-          
-          for folder in "${folders[@]}"; do
+          zip_addon() {
+            local folder="$1"
+
             echo "Processing $folder"
-          
-            cd "$folder" || { echo "Failed to enter $folder"; exit 1; }
-          
-            toc_file=(*.toc)
-            [[ -f "${toc_file[0]}" ]] || { echo "No .toc found in $folder"; exit 1; }
-              
-              version=$(awk 'NR==2 {print $3}' "${toc_file[0]}")
-              zip_name="../_zips/${folder}_v${version}.zip"
-          
+
+            cd "$folder" || {
+              echo "Failed to enter $folder"
+              return 1
+            }
+
+            shopt -s nullglob
+
+            local toc_file=(*.toc)
+            [[ -f "${toc_file[0]}" ]] || {
+              echo "No .toc found in $folder"
+              return 1
+            }
+
+            local version
+            version=$(awk 'NR==2 {print $3}' "${toc_file[0]}")
+
+            local zip_name="../_zips/${folder}_v${version}.zip"
+
             zip -r "$zip_name" . \
               -x "./_misc/*" \
               -x "*.zip"
+
+            echo "Created $zip_name"
+          }
           
-            echo "Created zip file $zip_name"
+          export -f zip_addon
           
-            cd ..
-          done
+          printf '%s\n' \
+          "HeartAttack" \
+          "HumorousDeath" \
+          "InterruptReminder" \
+          "LibFramePool-1.0" \
+          "TalkingHeadShut" \
+          "ThreatTrack" \
+          "ZoomerWoW" \
+          | xargs -n1 -P2 bash -c 'zip_addon "$@"' _
+
       - name: Push ZIPs to repo
         run: |
           branch_name=$(date +"%d-%b-%Y-%H-%M-%S")
