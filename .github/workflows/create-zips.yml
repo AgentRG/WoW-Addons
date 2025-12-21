@@ -42,19 +42,26 @@ jobs:
       - name: Run a multi-line script
         run: |
           folders=("HeartAttack" "HumorousDeath" "InterruptReminder" "LibFramePool-1.0" "TalkingHeadShut" "ThreatTrack" "ZoomerWoW")
+          
+          mkdir -p _zips
+          
           for folder in "${folders[@]}"; do
-            files=()
-            cd "${folder}"
-            version=$(head -n2 *.toc | tail -n1 | awk '{print $3}')
-            zip_name="${folder}_v${version}.zip"
-            for item in "."/*; do
-              if [[ "$item" != "./_misc" && "$item" != "./*.zip" ]]; then
-                files+=("$item")
-              fi
-            done
-            zip -r "$zip_name" "${files[@]}"
+            echo "Processing $folder"
+          
+            cd "$folder" || { echo "Failed to enter $folder"; exit 1; }
+          
+            toc_file=(*.toc)
+            [[ -f "${toc_file[0]}" ]] || { echo "No .toc found in $folder"; exit 1; }
+              
+              version=$(awk 'NR==2 {print $3}' "${toc_file[0]}")
+              zip_name="../_zips/${folder}_v${version}.zip"
+          
+            zip -r "$zip_name" . \
+              -x "./_misc/*" \
+              -x "*.zip"
+          
             echo "Created zip file $zip_name"
-            mv "$zip_name" ../_zips
+          
             cd ..
           done
       - name: Push ZIPs to repo
